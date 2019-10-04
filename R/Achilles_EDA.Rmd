@@ -1,0 +1,136 @@
+---
+title: "Achilles_gene_effect_EDA"
+author: "Nathaniel Evans"
+date: "October 3, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+```
+
+
+# Overview
+
+In this script we will look at the gene dependency dataset [achilles](https://depmap.org/portal/download/), provided by the cancer dependency map (DepMap). Our goal is to map the gene dependency score into an AUC analagous value.   
+
+> To apply RNA interference at genome scale, we developed a highly parallel ''pooled screening'' strategy that employs the previously described library created by The RNAi Consortium (TRC) (9, 10). The TRC library contains ~170,000 lentivirally encoded short hairpin RNAs (shRNAs), with 5 or more independent shRNAs targeting each of 17,200 human genes, as well as an equivalent collection targeting each of 16,000 mouse genes. The pooled screening approach involves infecting cultured cells with a pool of shRNAs, allowing the cells to proliferate for a period, isolating the shRNA sequences from the resulting cells by PCR amplification, and measuring the relative abundance of the shRNAs (by cleaving the hairpins with a restriction enzyme and hybridizing them to a microarray complementary to the half-hairpin sequences) [Fig. 1A, supporting information (SI) Fig. S1 and SI Methods]. In the experiments below, we used a sublibrary containing 45,000 shRNAs corresponding to ~9,500 human genes (45k shRNA pool). We demonstrated that 4-fold changes in relative shRNA abundance are easily resolved (Fig. 1B) using this approach. [1]   
+
+When we suppress a gene, we can quantify the selective pressure it causes by looking at the population of cells that still express the gene knockout/supression allele. After many doublings, the *relative* number of cells with a given gene knockout will increase if the gene supression has a stimulatory effect and decrease if it has an inhibitory response.   
+
+## Potentially confounding measurment issues 
+
+- Multigene knockout: This is less of an issue since the use a mutiplicity of ~0.3. Meaning that there are 0.3 viral particles to one cell. Therefore *most* cells will be unaffected, and further, the number of cells to get two viral particles will be very low.  
+
+- Off Targeting: This is probably the most significant concern as it mis-assigns the dependency or confounds independent gene measurement. More recent methods use NGS expression data to attempt to deconvolve these off target effects [2].   
+
+- Adaptive Transcription: In response to some forms of transcript degredation, upregulation of paralogs can occur, which in may shoulder some of the knockout-gene LOF burden thus resulting in a normal or semi-normal phenotype [3]. If this is occuring, there may be genes whose dependency is under estimated. There may be opportunity to correct for this by using NGS data to quantify upregulation of genes with sequence similarity.   
+
+## standing dataset questions
+
+- what do NAs represent? Low value? Poor quality? No data?   
+
+# Data In 
+
+```{r}
+ach.dat <- as.data.frame(fread('./../data/Achilles_gene_effect.csv', sep=','))
+#ach.dat %>% head()
+ach.dat <- ach.dat %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, dep = value) %>% select(-V1, -value)
+ach.dat %>% head()
+```
+
+# EDA 
+
+```{r}
+ach.dat %>% summary()
+
+# totals 
+ach.dat %>% drop_na() %>% nrow()
+
+# cell lines 
+ach.dat %>% select(cell_line) %>% unique() %>% nrow() #625
+
+# by group 
+#ach.dat %>% group_by(cell_line) %>% count() #18333 for all
+```
+
+# Dependence Distribution
+
+```{r}
+ach.dat %>% ggplot(aes(x=dep, fill='red'), alpha=0.3) + geom_density()
+```
+
+
+# AUC conversion 
+
+We'll use a fold change of `-2` to be the lower limit for AUC, and `0` be the upper limit for AUC. Between these two, the conversion will be linear. Future implementations should use a logistic regression conversion.   
+
+```{r}
+quantile(ach.dat$dep, probs=0.001, na.rm=TRUE)
+
+AUC.conversion <- function(val, lower.lim=-2, upper.lim=0, scaling='linear', na_convert=NA ){
+  
+  if (is.na(val)){
+    return(NA)
+  }
+  if (val > upper.lim) {
+    return(1)
+  } 
+  if (val < lower.lim) {
+    return(0)
+  }
+  
+  if (scaling == 'linear') {
+    slope <- 1/(upper.lim-lower.lim)
+    int <- 1 - upper.lim/(upper.lim-lower.lim)
+    return(as.numeric(slope*val + int))
+    
+  } else { 
+    print('other scalings are not supported; use `linear`.')
+    return(NA)
+  }
+}
+
+```
+
+```{r}
+ach.dat <- ach.dat %>% mutate(AUC = sapply(dep, AUC.conversion))
+ach.dat %>% head()
+```
+
+
+# AUC distribution 
+
+```{r}
+ach.dat %>% ggplot(aes(x=AUC, fill='red')) + geom_density()
+ach.dat[1:100000,] %>% ggplot(aes(x=dep, y=AUC), alpha=0.2) + geom_point()
+```
+
+
+# References 
+
+[1] Luo, B. et al. Highly parallel identification of essential genes in cancer cells. Proceedings of the National Academy of Sciences 105, 20380-20385 (2008).
+
+[2] Defining a Cancer Dependency Map: Cell. Available at: https://www.cell.com/cell/fulltext/S0092-8674(17)30651-7?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867417306517%3Fshowall%3Dtrue. (Accessed: 3rd October 2019)
+
+[3] 1.El-Brolosy, M. A. et al. Genetic compensation triggered by mutant mRNA degradation. Nature 568, 193-197 (2019).
+
+
+
+
+
+
+
