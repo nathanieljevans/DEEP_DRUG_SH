@@ -1,0 +1,50 @@
+---
+title: "beatAML_EDA.Rmd"
+author: "Nathaniel Evans"
+date: "October 4, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+```
+
+
+# overview 
+
+
+
+
+
+
+# data in 
+
+```{r}
+load('../data/beataml_drug_results_probit.Rdata')
+#ccle.dat <- ccle.dat %>% pivot_longer(-V1, names_to='cell_line') %>% mutate(gene = V1, effect = value) %>% select(-V1, -value)
+
+aml.dat <- fin.drug.res %>% select(lab_id, inhibitor, auc)
+aml.dat %>% head()
+```
+
+
+```{r}
+aml.dat %>% summary()
+
+aml.dat %>% select(lab_id) %>% unique() %>% nrow() #529
+
+aml.dat %>% select(inhibitor) %>% unique() %>% nrow() #386
+
+```

@@ -1,0 +1,42 @@
+---
+title: "GDSC DRUG DATA EDA"
+author: "Nathaniel Evans"
+date: "October 4, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+```
+
+
+# overview 
+
+
+
+
+
+
+# data in 
+
+```{r}
+gdsc.dat <- as.data.frame(fread('./../data/GDSC_AUC.csv', sep=','))
+gdsc.dat <- gdsc.dat %>% pivot_longer(-V1, names_to='cell_line') %>% mutate(gene = V1, AUC = value) %>% select(-V1, -value)
+
+gdsc.dat %>% tail()
+
+gdsc.dat %>% summary()
+
+```

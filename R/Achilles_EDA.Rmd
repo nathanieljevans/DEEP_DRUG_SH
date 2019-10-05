@@ -58,10 +58,13 @@ ach.dat %>% head()
 ach.dat %>% summary()
 
 # totals 
-ach.dat %>% drop_na() %>% nrow()
+ach.dat %>% drop_na() %>% nrow() # ~11e6
 
 # cell lines 
 ach.dat %>% select(cell_line) %>% unique() %>% nrow() #625
+
+# num genes 
+ach.dat %>% select(gene) %>% unique() %>% nrow() #18333
 
 # by group 
 #ach.dat %>% group_by(cell_line) %>% count() #18333 for all

@@ -1,0 +1,39 @@
+---
+title: "Combined RNAi screen"
+author: "Nathaniel Evans"
+date: "October 4, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+```
+
+
+# overview 
+
+
+
+
+
+
+# data in 
+
+```{r}
+rnai.dat <- as.data.frame(fread('./../data/D2_combined_gene_dep_scores.csv', sep=','))
+rnai.dat <- rnai.dat %>% pivot_longer(-V1, names_to='cell_line') %>% mutate(gene = V1, effect = value) %>% select(-V1, -value)
+
+rnai.dat %>% head()
+```

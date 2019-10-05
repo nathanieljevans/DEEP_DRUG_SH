@@ -1,0 +1,38 @@
+---
+title: "CCLE_EDA"
+author: "Nathaniel Evans"
+date: "October 4, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+```
+
+
+# overview 
+
+
+
+
+
+
+# data in 
+
+```{r}
+ccle.dat <- as.data.frame(fread('./../data/CCLE_NP24.2009_Drug_data_2015.02.24.csv', sep=','))
+
+ccle.dat %>% head()
+```

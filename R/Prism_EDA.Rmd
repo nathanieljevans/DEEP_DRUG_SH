@@ -1,0 +1,56 @@
+---
+title: "Prism_EDA.Rmd"
+author: "Nathaniel Evans"
+date: "October 4, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+```
+
+
+# overview 
+
+
+
+
+
+
+# data in 
+
+```{r}
+pri.dat <- as.data.frame(fread('./../data/primary_replicate_collapsed_logfold_change.csv', sep=','))
+pri.dat <- pri.dat %>% pivot_longer(-V1, names_to='drug') %>% mutate(cell_line = V1, effect = value) %>% select(-V1, -value)
+
+pri.dat %>% head()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
