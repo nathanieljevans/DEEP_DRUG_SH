@@ -1,0 +1,12 @@
+INFO [2019-10-31 10:09:46] $x
+INFO [2019-10-31 10:09:46] list(genes.exp, genes.rnai, genes.crispr)
+INFO [2019-10-31 10:09:46] 
+INFO [2019-10-31 10:09:46] $category.names
+INFO [2019-10-31 10:09:46] c("EXPR GENES", "RNAi GENES", "CRISPR GENES")
+INFO [2019-10-31 10:09:46] 
+INFO [2019-10-31 10:09:46] $filename
+INFO [2019-10-31 10:09:46] [1] "./figs/gene_venn.png"
+INFO [2019-10-31 10:09:46] 
+INFO [2019-10-31 10:09:46] $output
+INFO [2019-10-31 10:09:46] T
+INFO [2019-10-31 10:09:46] 

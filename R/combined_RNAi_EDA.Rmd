@@ -31,9 +31,29 @@ library(data.table)
 
 # data in 
 
+[info]
+[Combined RNAi - source](https://ndownloader.figshare.com/files/13515395)
+
+### Citation 
+
+James M. McFarland, Zandra V. Ho, Guillaume Kugener, Joshua M. Dempster, Phillip G. Montgomery, Jordan G. Bryan, John M. Krill-Burger, Thomas M. Green, Francisca Vazquez, Jesse S. Boehm, Todd R. Golub, William C. Hahn, David E. Root, Aviad Tsherniak. (2018). Improved estimation of cancer dependencies from large-scale RNAi screens using model-based normalization and data integration. Nature Communications 9, 1. https://doi.org/10.1038/s41467-018-06916-5 
+
+
 ```{r}
 rnai.dat <- as.data.frame(fread('./../data/D2_combined_gene_dep_scores.csv', sep=','))
 rnai.dat <- rnai.dat %>% pivot_longer(-V1, names_to='cell_line') %>% mutate(gene = V1, effect = value) %>% select(-V1, -value)
 
 rnai.dat %>% head()
+```
+
+
+
+
+
+
+```{r}
+CCLE.rnaSeq <- as.data.frame(fread('./../data/CCLE_RNAseq_rsem_genes_tpm_20180929.txt', sep='\t'))
+
+CCLE.rnaSeq[1:5, 1:5]
+
 ```

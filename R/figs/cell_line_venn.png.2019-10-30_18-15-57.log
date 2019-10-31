@@ -1,0 +1,13 @@
+INFO [2019-10-30 18:15:57] $x
+INFO [2019-10-30 18:15:57] list(cell.lines.exp, cell.lines.rnai, cell.lines.crispr)
+INFO [2019-10-30 18:15:57] 
+INFO [2019-10-30 18:15:57] $category.names
+INFO [2019-10-30 18:15:57] c("CCLE EXP DATA", "RNAi DEP", "CRISPR DEP")
+INFO [2019-10-30 18:15:57] 
+INFO [2019-10-30 18:15:57] $filename
+INFO [2019-10-30 18:15:57] [1] "./figs/cell_line_venn.png"
+INFO [2019-10-30 18:15:57] 
+INFO [2019-10-30 18:15:57] $output
+INFO [2019-10-30 18:15:57] T
+INFO [2019-10-30 18:15:57] 
+ERROR [2019-10-30 18:15:57] NAs in dataset

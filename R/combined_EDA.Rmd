@@ -1,0 +1,291 @@
+---
+title: "Combined RNAi screen"
+author: "Nathaniel Evans"
+date: "October 4, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+library(VennDiagram)
+```
+
+
+# overview 
+
+
+
+
+
+
+# Data
+
+## Cell Line Metadata 
+
+```{r}
+meta.dat <- as.data.frame(fread('./../data/sample_info.csv', sep=','))
+meta.dat %>% head()
+```
+
+## Combined RNAi
+
+[more info](https://depmap.org/R2-D2/)  
+
+[source](https://ndownloader.figshare.com/files/13515395)  
+
+#### References 
+
+James M. McFarland, Zandra V. Ho, Guillaume Kugener, Joshua M. Dempster, Phillip G. Montgomery, Jordan G. Bryan, John M. Krill-Burger, Thomas M. Green, Francisca Vazquez, Jesse S. Boehm, Todd R. Golub, William C. Hahn, David E. Root, Aviad Tsherniak. (2018). Improved estimation of cancer dependencies from large-scale RNAi screens using model-based normalization and data integration. Nature Communications 9, 1. https://doi.org/10.1038/s41467-018-06916-5 
+
+
+```{r}
+rnai.dat <- as.data.frame(fread('./../data/D2_combined_gene_dep_scores.csv', sep=','))
+
+rnai.dat <- rnai.dat %>% pivot_longer(-V1, names_to='cell_line') %>% mutate(gene = V1, effect = value) %>% select(-V1, -value) %>% merge(meta.dat, by.x='cell_line', by.y='CCLE Name', all.x=T)
+ 
+rnai.dat %>% head()
+```
+
+
+## CRISPR (Avana)
+
+[more info](https://depmap.org/portal/download/)
+
+[source](https://ndownloader.figshare.com/files/16757666)
+
+### 'omics datasets:
+Mahmoud Ghandi, Franklin W. Huang, Judit Jané-Valbuena, Gregory V. Kryukov, ... Todd R. Golub, Levi A. Garraway & William R. Sellers. 2019. Next-generation characterization of the Cancer Cell Line Encyclopedia. Nature 569, 503-508 (2019).
+
+#### References 
+
+DepMap, Broad (2019): DepMap 19Q3 Public. figshare. Dataset doi:10.6084/m9.figshare.9201770.v1.
+
+Robin M. Meyers, Jordan G. Bryan, James M. McFarland, Barbara A. Weir, ... David E. Root, William C. Hahn, Aviad Tsherniak. Computational correction of copy number effect improves specificity of CRISPR-Cas9 essentiality screens in cancer cells. Nature Genetics 2017 October 49:1779-1784. doi:10.1038/ng.3984
+
+```{r}
+crispr.dat <- as.data.frame(fread('./../data/Achilles_gene_effect.csv', sep=','))
+crispr.dat <- crispr.dat %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, dep = value) %>% select(-V1, -value) %>% merge(meta.dat, by.x='cell_line', by.y='DepMap_ID', all.x=T)
+
+crispr.dat %>% head()
+```
+
+## CCLE Expression 
+
+
+[Cellular Models Expression Public 19Q3](https://depmap.org/portal/download/)
+
+[source](https://ndownloader.figshare.com/files/16757690)
+
+# References 
+
+Mahmoud Ghandi, Franklin W. Huang, Judit Jané-Valbuena, Gregory V. Kryukov, ... Todd R. Golub, Levi A. Garraway & William R. Sellers. 2019. Next-generation characterization of the Cancer Cell Line Encyclopedia. Nature 569, 503-508 (2019).
+
+```{r}
+CCLE.rnaSeq <- as.data.frame(fread('./../data/CCLE_expression.csv', sep=',')) %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, expression = value) %>% select(-V1, -value)
+
+CCLE.rnaSeq %>% head()
+
+```
+
+## Drug Response (PRISM)
+
+Pooled cell line drug response data; measured by fold change of cell line abundance. 
+
+[Drug sensitivity (PRISM Repurposing Primary Screen) 19Q3](https://depmap.org/portal/download/)
+
+[source](https://ndownloader.figshare.com/files/17008628)
+
+#### References 
+
+Steven M Corsello, Rohith T Nagari, Ryan D Spangler, Jordan Rossen, Mustafa Kocak, Jordan G Bryan, Ranad Humeidi, David Peck, Xiaoyun Wu, Andrew A Tang, Vickie MWang, Samantha A Bender, Evan Lemire, Rajiv Narayan, Philip Montgomery, Uri Ben-David, Yejia Chen, Matthew G Rees, Nicholas J Lyons, James M McFarland, Bang TWong, Li Wang, Nancy Dumont, Patrick J O'Hearn, Eric Stefan, John G Doench, HeidiGreulich, Matthew Meyerson, Francisca Vazquez, Aravind Subramanian, Jennifer A Roth, Joshua A Bittker, Jesse S Boehm, Christopher C Mader, Aviad Tsherniak, Todd R Golub. 2019. Non-oncology drugs are a source of previously unappreciated anti-cancer activity. bioRxiv doi: 10.1101/730119
+
+
+```{r}
+drug.PRISM <- as.data.frame(fread('./../data/primary_replicate_collapsed_logfold_change.csv', sep=',')) %>% pivot_longer(-V1, names_to='drug') %>% mutate(cell_line = V1, CV_fold_change = value) %>% select(-V1, -value)
+drug.PRISM %>% head()
+```
+
+## Drug Response (Sanger GDSC)
+
+Sanger GDSC v17.3  
+
+[source](https://depmap.org/portal/download/api/download/external?file_name=processed_portal_downloads%2Fsanger-gdsc-545e.2%2FGDSC_AUC.csv)
+
+#### References
+
+Iorio, Francesco, Theo A. Knijnenburg, Daniel J. Vis, Graham R. Bignell, Michael P. Menden, Michael Schubert, Nanne Aben et al., A landscape of pharmacogenomic interactions in cancer Cell 166(3), 740-754.
+
+```{r}
+drug.GDSC <- as.data.frame(fread('./../data/GDSC_AUC.csv', sep=','))
+drug.GDSC <- drug.GDSC %>% pivot_longer(-V1, names_to='cell_line') %>% mutate(drug = V1, AUC = value) %>% select(-V1, -value) %>% drop_na()
+
+drug.GDSC %>% head()
+```
+
+## Drug Response (CTRP CTD)
+
+CTRP CTD^2
+
+[source](ftp://caftpd.nci.nih.gov/pub/OCG-DCC/CTD2/Broad/CTRPv2.0_2015_ctd2_ExpandedDataset/CTRPv2.0_2015_ctd2_ExpandedDataset.zip)
+
+#### References 
+
+Harnessing Connectivity in a Large-Scale Small-Molecule Sensitivity Dataset Seashore-Ludlow et al., Cancer Discovery, 5, 1210-1223 (2015) and Correlating chemical sensitivity and basal gene expression reveals mechanism of action Rees et al., Nat Chem Biol, 12, 109-116 (2016)
+
+```{r}
+# use master_cpd_id to merge to drug name 
+CTRP.compound.meta <- as.data.frame(fread('./../data/CTRPv2.0_2015_ctd2_ExpandedDataset/v20.meta.per_compound.txt', sep='\t'))
+
+#CTRP.compound.meta %>% head() 
+
+CTRP.cell.line.meta <- as.data.frame(fread('./../data/CTRPv2.0_2015_ctd2_ExpandedDataset/v20.meta.per_cell_line.txt', sep='\t'))
+
+#CTRP.cell.line.meta %>% head()
+
+CTRP.exp.meta <- as.data.frame(fread('./../data/CTRPv2.0_2015_ctd2_ExpandedDataset/v20.meta.per_experiment.txt', sep='\t')) # this has the link we need
+
+#CTRP.exp.meta %>% head()
+
+drug.CTRP <- as.data.frame(fread('./../data/CTRPv2.0_2015_ctd2_ExpandedDataset/v20.data.curves_post_qc.txt', sep='\t')) %>% select(experiment_id, master_cpd_id, area_under_curve) %>% merge(select(CTRP.compound.meta, master_cpd_id, cpd_name, gene_symbol_of_protein_target, target_or_activity_of_compound), by='master_cpd_id') %>% merge(select(CTRP.exp.meta, experiment_id, master_ccl_id), by='experiment_id') %>% merge(select(CTRP.cell.line.meta, master_ccl_id, ccl_name, ccle_primary_site), by='master_ccl_id')
+
+drug.CTRP %>% head()
+
+```
+
+
+
+## CCLE NP24 
+
+Pharmacologic profiles for 24 anticancer drugs across 504 cell lines.
+
+[more info](https://depmap.org/portal/ccle/)
+
+[source](https://depmap.org/portal/download/api/download/external?file_name=ccle_legacy_data%2Fpharmacological_profiling%2FCCLE_NP24.2009_Drug_data_2015.02.24.csv)
+
+#### References 
+
+Cancer Cell Line Encyclopedia Consortium, and Genomics of Drug Sensitivity in Cancer Consortium. 2015. Pharmacogenomic Agreement between Two Cancer Cell Line Data Sets. Nature 528 (7580):84-87. https://doi.org/10.1038/nature15736.
+
+Jordi Barretina, Giordano Caponigro, Nicolas Stransky, Kavitha Venkatesan, William R. Sellers, Robert Schlegel, Levi A. Garraway, et. al. 2012. The Cancer Cell Line Encyclopedia Enables Predictive Modelling of Anticancer Drug Sensitivity. Nature 483 (7391):603-7. https://doi.org/10.1038/nature11003.
+
+```{r}
+drug.CCLE <- as.data.frame(fread('./../data/CCLE_NP24.2009_Drug_data_2015.02.24.csv', sep=','))
+drug.CCLE %>% head()
+
+CCLE.profile <- as.data.frame(fread('./../data/CCLE_NP24.2009_profiling_2012.02.20.csv', sep=','))
+CCLE.profile %>% head()
+```
+
+## Targetome 
+
+--- 
+### From Rory 
+---
+
+#### targetome_DrugInformation_070617.txt
+- drugs by class/categories (ATC, EPC, etc) + FDA approval date
+
+#### targetome_DrugSynonymDictionary_100917.txt
+- mapping for drug->synonyms
+- includes chemical, brand, generic, proprietary, investigational names as available
+- note IMO it's best to use the full synonym dictionary because there is poor consistency about drug name usage :/
+
+#### targetome_Evidence_TIPS_101017.txt
+- includes target evidence for ~140 drugs
+
+#### targetome_FullEvidence_011019.txt
+- includes target evidence for ~170 drugs
+- this is all drugs we originally mined, note we subsetted to anti-neoplastic (ATC class with prefix "L01" for cancer targetome paper)
+- +small bug fix, there were a few rows with blank assay values due to a range of nM values being reported, added "range" flag to indicate
+
+---
+
+Drug target information
+
+[more info](https://www.ncbi.nlm.nih.gov/pubmed/28964549)
+
+#### References 
+
+Evidence-Based Precision Oncology with the Cancer Targetome. - PubMed - NCBI. https://www.ncbi.nlm.nih.gov/pubmed/28964549.
+
+```{r}
+
+targetome.druginfo <- as.data.frame(fread('./../data/targetome/Targetome_DrugInformation_070617.txt', sep='\t'))
+targetome.drugsynonym <- as.data.frame(fread('./../data/targetome/Targetome_DrugSynonymDictionary_100917.txt', sep='\t'))
+targetome.evidence.tips <- as.data.frame(fread('./../data/targetome/Targetome_Evidence_TIPS_101017.txt', sep='\t'))
+targetome.evidence.full <- as.data.frame(fread('./../data/targetome/Targetome_FullEvidence_011019.txt', sep='\t'))
+
+targetome.druginfo %>% head() 
+targetome.drugsynonym %>% head()
+targetome.evidence.tips %>% head()
+targetome.evidence.full %>% head()
+
+```
+
+
+# EDA 
+
+## CCLE Cell-Line Overlap
+
+Does our CCLE gene expression have all the cell lines used in the gene dependency datasets? 
+
+```{r}
+
+cell.lines.exp <- CCLE.rnaSeq %>% select(cell_line) %>% unique() %>% drop_na() %>% .$cell_line
+
+cell.lines.rnai <- rnai.dat %>% select(DepMap_ID) %>% unique() %>% drop_na() %>% .$DepMap_ID
+
+cell.lines.crispr <- crispr.dat %>% select(cell_line) %>% unique() %>% drop_na() %>% .$cell_line
+
+venn.diagram(
+  x = list(cell.lines.exp, cell.lines.rnai, cell.lines.crispr),
+  category.names = c("CCLE EXPR" , "RNAi DEP" , "CRISPR DEP"),
+  filename = './figs/cell_line_venn.png',
+  output=T
+)
+
+```
+
+![](./figs/cell_line_venn.png)
+
+
+## Gene Dependency Coverage 
+
+How many of the gene dependency assays overlap between the RNAi and CRISPR screens in our RNA expression? 
+
+```{r}
+genes.exp <- CCLE.rnaSeq %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
+
+genes.rnai <- rnai.dat %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
+
+genes.crispr <- crispr.dat %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
+
+venn.diagram(
+  x = list(genes.exp, genes.rnai, genes.crispr),
+  category.names = c("EXPR GENES" , "RNAi GENES" , "CRISPR GENES"),
+  filename = './figs/gene_venn.png',
+  output=T
+)
+
+```
+
+![](./figs/gene_venn.png)
+
+
+
+
+
+
+
