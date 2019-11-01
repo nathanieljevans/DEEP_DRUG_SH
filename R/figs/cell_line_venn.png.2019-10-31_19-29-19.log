@@ -1,0 +1,12 @@
+INFO [2019-10-31 19:29:19] $x
+INFO [2019-10-31 19:29:19] list(cell.lines.exp, cell.lines.rnai, cell.lines.crispr, cell.lines.CCLE)
+INFO [2019-10-31 19:29:19] 
+INFO [2019-10-31 19:29:19] $category.names
+INFO [2019-10-31 19:29:19] c("CCLE EXPR", "RNAi DEP", "CRISPR DEP", "CCLE DRUG")
+INFO [2019-10-31 19:29:19] 
+INFO [2019-10-31 19:29:19] $filename
+INFO [2019-10-31 19:29:19] [1] "./figs/cell_line_venn.png"
+INFO [2019-10-31 19:29:19] 
+INFO [2019-10-31 19:29:19] $output
+INFO [2019-10-31 19:29:19] T
+INFO [2019-10-31 19:29:19] 
