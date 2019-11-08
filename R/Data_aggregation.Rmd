@@ -58,10 +58,9 @@ James M. McFarland, Zandra V. Ho, Guillaume Kugener, Joshua M. Dempster, Phillip
 dep.RNAi <- as.data.frame(fread('./../data/D2_combined_gene_dep_scores.csv', sep=',')) %>% pivot_longer(-V1, names_to='cell_line') %>% mutate(gene = V1, effect = value) %>% select(-V1, -value) %>% merge(meta.dat, by.x='cell_line', by.y='CCLE Name', all.x=T)
 #dep.RNAi %>% head()
  
-rnai.dat <- dep.RNAi %>% select(cell_line, gene, effect, DepMap_ID) %>% mutate(response=effect, target=gene, response_type='RNAi_dependency') %>% select(DepMap_ID, target, response, response_type) 
+rnai.dat <- dep.RNAi %>% select(cell_line, gene, effect, DepMap_ID) %>% mutate(drug_name='rnai screen',response=effect, target=gene, response_type='RNAi_dependency') %>% select(drug_name, DepMap_ID, target, response, response_type) %>% mutate(id=DepMap_ID, id_type='DepMap_ID') %>% drop_na()  %>% select(-DepMap_ID)
 rnai.dat %>% head()
 ```
-
 
 # CRISPR (Avana)
 
@@ -84,13 +83,37 @@ Mahmoud Ghandi, Franklin W. Huang, Judit Jané-Valbuena, Gregory V. Kryukov, ... 
 dep.CRISPR <- as.data.frame(fread('./../data/Achilles_gene_effect.csv', sep=',')) %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, dep = value) %>% select(-V1, -value) %>% merge(meta.dat, by.x='cell_line', by.y='DepMap_ID', all.x=T)
 #dep.CRISPR %>% head()
 
-crispr.dat <- dep.CRISPR %>% select(cell_line, gene, dep) %>% mutate(DepMap_ID=cell_line, target=gene, response=dep, response_type='crispr_dependency') %>% select(DepMap_ID,target,response,response_type)
+crispr.dat <- dep.CRISPR %>% select(cell_line, gene, dep) %>% mutate(drug_name='crispr_screen', DepMap_ID=cell_line, target=gene, response=dep, response_type='crispr_dependency') %>% select(drug_name, DepMap_ID,target,response,response_type) %>% mutate(id=DepMap_ID, id_type='DepMap_ID') %>% drop_na() %>% select(-DepMap_ID)
+
 crispr.dat %>% head()
 ```
 
 # CCLE Expression 
 
 This is the expression data we will use for all datasets except beatAML. 
+
+---
+### From Ghandi et. al. 
+
+> **RNA-seq profiling:** RNA-seq and analysis were performed for 1,019 cell lines as previously described5. In summary, non-strand-specific RNA sequencing was performed using large-scale, automated method of the Illumina TruSeq RNA Sample Preparation protocol. Oligo-dT beads were used to select polyadenylated mRNA. The selected RNA was then heat fragmented and randomly primed before cDNA synthesis. To maximize power to detect fusions, the insert size of fragments was set to 400 nt. The resultant cDNA then went through Illumina library preparation (end-repair, base 'A' addition, adaptor ligation, and enrichment) using Broad-designed indexed adapters for multiplexing. Sequencing was performed on the Illumina HiSeq 2000 or HiSeq 2500 instruments with sequence coverage of no less than 100 million paired 101 nucleotides-long reads per sample.
+
+> **Short read alignment and calculation of gene *expression**: RNA-seq reads were aligned to the GRCh37 build of the human genome reference using STAR 2.4.2a59. The GENCODE v19 annotation was used for the STAR alignment and all other quantifications. Gene level RPKM and read count values were calculated using RNA-SeQC v1.1.860. Exon-exon junction read counts were obtained from STAR. Isoform-level expression in TPM (transcripts per million) was quantified using RSEM v.1.2.22. All methods were run as part of the pipeline developed for the GTEx Consortium (https://gtexportal.org)61.
+
+---
+### From DepMap Description (download page)
+
+File Description
+RNAseq **TPM** gene expression data for just protein coding genes using RSEM. Log2 transformed, using a pseudo-count of 1.
+
+Rows: cell lines (Broad IDs)
+Columns: genes (HGNC symbol and Entrez ID)
+
+---
+
+But What type of normalization? [TPM,RPKM]
+-> This expression dataset uses **TPM** for **protein coding genes** and is **log2 transformed** using a pseudo-count of 1. They use [RSEM](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-12-323#Sec17) for this normalization. 
+
+[RSEM tutorial](https://github.com/bli25broad/RSEM_tutorial)
 
 ## Sources
 
@@ -103,7 +126,7 @@ This is the expression data we will use for all datasets except beatAML.
 Mahmoud Ghandi, Franklin W. Huang, Judit Jané-Valbuena, Gregory V. Kryukov, ... Todd R. Golub, Levi A. Garraway & William R. Sellers. 2019. Next-generation characterization of the Cancer Cell Line Encyclopedia. Nature 569, 503-508 (2019).
 
 ```{r}
-CCLE.rnaSeq <- as.data.frame(fread('./../data/CCLE_expression.csv', sep=',')) %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, expression = value) %>% select(-V1, -value)
+CCLE.rnaSeq <- as.data.frame(fread('./../data/CCLE_expression.csv', sep=',')) %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, expression = value) %>% select(-V1, -value) %>% separate(gene, into = c("HGNC_sym", "entrez_id"), sep = " \\(") %>% mutate(entrez_id=substr(entrez_id, 1, nchar(entrez_id)-1))
 
 CCLE.rnaSeq %>% head()
 ```
@@ -130,7 +153,7 @@ drug.PRISM <- as.data.frame(fread('./../data/primary_replicate_collapsed_logfold
 PRISM.meta <- as.data.frame(fread('./../data/primary_replicate_collapsed_treatment_info.csv', sep=','))
 #PRISM.meta %>% head()
 
-PRISM.dat <- drug.PRISM %>% merge(unique(select(PRISM.meta, column_name, name, target)), by.x='drug', by.y='column_name', all.x=T) %>% mutate(drug_name=name) %>% select(-name) %>% mutate(DepMap_ID=cell_line, response=CV_fold_change, response_type='pooled_drugresp_prism') %>% select(DepMap_ID, drug_name, target, response, response_type)
+PRISM.dat <- drug.PRISM %>% merge(unique(select(PRISM.meta, column_name, name, target)), by.x='drug', by.y='column_name', all.x=T) %>% mutate(drug_name=name) %>% select(-name) %>% mutate(DepMap_ID=cell_line, response=CV_fold_change, response_type='pooled_drugresp_prism') %>% select(DepMap_ID, drug_name, target, response, response_type) %>% mutate(id=DepMap_ID, id_type='DepMap_ID') %>% drop_na()  %>% select(-DepMap_ID)
 
 PRISM.dat %>% head()
 ```
@@ -173,7 +196,8 @@ GDSC.meta <- readxl::read_excel('./../data/Cell_Lines_Details.xlsx') %>% merge(s
 
 #GDSC.meta %>% head()
 
-GDSC.dat <- drug.GDSC %>% merge(select(GDSC.meta, DepMap_ID, `Sample Name`), by.x='CELL_LINE_NAME', by.y='Sample Name') %>% select(DepMap_ID, DRUG_NAME, PUTATIVE_TARGET, AUC) %>% mutate(drug_name=DRUG_NAME, target=PUTATIVE_TARGET, response=AUC, response_type='AUC_GDSC') %>% select(DepMap_ID, drug_name, target, response, response_type)
+GDSC.dat <- drug.GDSC %>% merge(select(GDSC.meta, DepMap_ID, `Sample Name`), by.x='CELL_LINE_NAME', by.y='Sample Name') %>% select(DepMap_ID, DRUG_NAME, PUTATIVE_TARGET, AUC) %>% mutate(drug_name=DRUG_NAME, target=PUTATIVE_TARGET, response=AUC, response_type='AUC_GDSC') %>% select(DepMap_ID, drug_name, target, response, response_type) %>% mutate(id=DepMap_ID, id_type='DepMap_ID') %>% drop_na() %>% select(-DepMap_ID)
+
 GDSC.dat %>% head()
 ```
 
@@ -208,9 +232,13 @@ CTRP.ccl <- readxl::read_excel('./../data/NIHMS711523-supplement-4.xlsx', sheet=
 CTRP.cpd <- readxl::read_excel('./../data/NIHMS711523-supplement-4.xlsx', sheet='S1')
 #CTRP.cpd %>% head()
 
-CTRP.dat <- CTRP.resp %>% merge(CTRP.ccl, by='index_ccl') %>% merge(CTRP.cpd, by='index_cpd') %>% merge(meta.dat, by.x='cell_line_name', by.y='stripped_cell_line_name') %>% mutate(response=area_under_sensitivity_curve, response_type='CTRP_AUC', target=gene_name_of_protein_target,drug_name=compound_name) %>% select(DepMap_ID, drug_name, target, response, response_type)
+CTRP.dat <- CTRP.resp %>% merge(CTRP.ccl, by='index_ccl') %>% merge(CTRP.cpd, by='index_cpd') %>% merge(meta.dat, by.x='cell_line_name', by.y='stripped_cell_line_name') %>% mutate(response=area_under_sensitivity_curve, response_type='CTRP_AUC', target=gene_name_of_protein_target,drug_name=compound_name) %>% select(DepMap_ID, drug_name, target, response, response_type) %>% mutate(id=DepMap_ID, id_type='DepMap_ID') %>% select(-DepMap_ID) %>% drop_na()
 
 CTRP.dat %>% head()
+```
+```{r}
+CTRP.dat$DepMap_ID %>% unique() %>% length()
+CTRP.dat$drug_name %>% unique() %>% length()
 ```
 
 # Drug Response (CCLE NP24)
@@ -259,11 +287,17 @@ CCLE.activity <-readxl::read_excel('./../data/CCLE_GNF_data_090613.xls')
 #CCLE.activity %>% head()
 
 # relevant features 
-CCLE.dat <- drug.CCLE %>% select(`CCLE Cell Line Name`, Compound, Target, ActArea) %>% merge(unique(select(meta.dat, DepMap_ID, `CCLE Name`)), by.x='CCLE Cell Line Name', by.y='CCLE Name') %>% mutate(response=ActArea, target=Target, drug_name=Compound, response_type='AUC_drug_CCLE') %>% select(DepMap_ID,drug_name, target, response, response_type)
+CCLE.dat <- drug.CCLE %>% select(`CCLE Cell Line Name`, Compound, Target, ActArea) %>% merge(unique(select(meta.dat, DepMap_ID, `CCLE Name`)), by.x='CCLE Cell Line Name', by.y='CCLE Name') %>% mutate(response=ActArea, target=Target, drug_name=Compound, response_type='AUC_drug_CCLE') %>% select(DepMap_ID,drug_name, target, response, response_type) %>% mutate(id=DepMap_ID, id_type='DepMap_ID') %>% drop_na() %>% select(-DepMap_ID)
+
 CCLE.dat %>% head()
+
 ```
 
 # beatAML (waves 1,2) Drug Response Data
+
+122 single agent drugs  
+
+528 patients  
 
 ## Sources 
 
@@ -280,82 +314,89 @@ Functional genomic landscape of acute myeloid leukaemia | Nature. https://www.na
 ```{r}
 beatAML.drug <- as.data.frame(fread('./../data/beatAML_waves1_2/OHSU_BeatAMLWaves1_2_Tyner_DrugResponse.txt', sep='\t')) %>% mutate(drug_name=inhibitor, response=auc, response_type='beatAML_AUC') %>% select(lab_id, drug_name, response, response_type)
 beatAML.drug %>% head()
+
+#beatAML.drug$drug_name %>% unique() %>% length() #122
+#beatAML.drug$lab_id %>% unique() %>% length() #528
 ```
 
-# beatAML Expression Data
+# beatAML Expression Data - FPKM
+
+Still need to convert Ensembl gene IDs to gene name (that depmap uses) and filter to set union on DepMap expr data
+
+**NOTE:** beatAML expression data is in RPKM, but DepMap expression data is in TPM.   
 
 ## Data Access & Processing   
 
-Use `STAR - counts` workflow data types: 510 files. To download:   
-1. Make a manifest file from the files listed in the `source` link below   
+Use `RPKM` workflow data types: 510 files. To download:     
+1. Make a manifest file from the files listed in the `source` link below    
 2. download the gdc-client tool ([info](https://docs.gdc.cancer.gov/Data_Transfer_Tool/Users_Guide/Getting_Started/))  
 3. Download manifest listed files by running: 
-        ```bash $ gdc-client download -m ./../beatAML-EXPR-manifest.txt```  
-4. Extract, normalize RPKM and combine data by running (in the python dir): 
-        ```bash $python extract_beatAML_expr.py path/to/expr/dir path/to/output/dir```
+        ```bash $ gdc-client download -m ./../beatAML-EXPR-manifest_RPKM.txt```    
+4. Extract, normalize RPKM (log2, pseudocount of 1) and combine data by running (in the python dir):   
+        ```bash $ python extract_beatAML_expr_RPKM.py ./../data/BeatAML_Waves1_2/EXPR_DATA_RPKM/ ./../data/beatAML_EXPR_RPKM.csv  ```
         
 [custom normalization](https://www.biostars.org/p/218995/):: use unstranded read count and convert to z-score 
 [for future - expression normalization techniques](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0206312)
-What normalization method does DepMap use?  
+What normalization method does DepMap use? TPM.    
 
+## sources   
 
-## Sources  
+Make [manifest](https://portal.gdc.cancer.gov/repository?filters=%7B%22op%22%3A%22and%22%2C%22content%22%3A%5B%7B%22content%22%3A%7B%22field%22%3A%22cases.case_id%22%2C%22value%22%3A%5B%22set_id%3AAW43dUlkTt_rMbGdDakD%22%5D%7D%2C%22op%22%3A%22IN%22%7D%2C%7B%22op%22%3A%22in%22%2C%22content%22%3A%7B%22field%22%3A%22files.analysis.workflow_type%22%2C%22value%22%3A%5B%22HTSeq%20-%20FPKM%22%5D%7D%7D%2C%7B%22op%22%3A%22in%22%2C%22content%22%3A%7B%22field%22%3A%22files.data_type%22%2C%22value%22%3A%5B%22Gene%20Expression%20Quantification%22%5D%7D%7D%5D%7D)  
 
-[source](https://portal.gdc.cancer.gov/repository?facetTab=files&filters=%7B%22op%22%3A%22and%22%2C%22content%22%3A%5B%7B%22op%22%3A%22in%22%2C%22content%22%3A%7B%22field%22%3A%22cases.project.project_id%22%2C%22value%22%3A%5B%22BEATAML1.0-COHORT%22%5D%7D%7D%2C%7B%22op%22%3A%22in%22%2C%22content%22%3A%7B%22field%22%3A%22files.analysis.workflow_type%22%2C%22value%22%3A%5B%22STAR%20-%20Counts%22%5D%7D%7D%2C%7B%22op%22%3A%22in%22%2C%22content%22%3A%7B%22field%22%3A%22files.data_type%22%2C%22value%22%3A%5B%22Gene%20Expression%20Quantification%22%5D%7D%7D%2C%7B%22op%22%3A%22in%22%2C%22content%22%3A%7B%22field%22%3A%22files.experimental_strategy%22%2C%22value%22%3A%5B%22RNA-Seq%22%5D%7D%7D%5D%7D&searchTableTab=files)
+[NCI GDC beatAML project page](https://portal.gdc.cancer.gov/projects/BEATAML1.0-COHORT)  
 
-[NCI GDC beatAML project page](https://portal.gdc.cancer.gov/projects/BEATAML1.0-COHORT)
+[source-meta](http://vizome.org/aml/)  
 
-[source-meta](http://vizome.org/aml/)
-
-## References  
-
-???   
 
 ```{r}
 beatAML.meta <- as.data.frame(fread('./../data/BeatAML_Waves1_2/All_sample_data.csv', sep=','))
-beatAML.meta %>% head()
+#beatAML.meta %>% head()
 
-beatAML.expr <- as.data.frame(fread('./../data/beatAML_EXPR.csv', sep=',')) %>% mutate(entity_id=substr(entity_id, 1, nchar(entity_id)-1))
+expr.temp<-as.data.frame(fread('./../data/beatAML_EXPR_FPKM.csv', sep=','))
+genes <- colnames(expr.temp)[4:length(colnames(expr.temp))]
+
+beatAML.expr <- as.data.frame(fread('./../data/beatAML_EXPR_FPKM.csv', sep=',')) %>% mutate(entity_id=substr(entity_id, 1, nchar(entity_id)-1)) %>% merge(select(beatAML.meta, SampleID, LLS_SampleID), by.x='entity_id', by.y='SampleID') %>% mutate(lab_id=LLS_SampleID) %>% select(lab_id, genes) 
+
 beatAML.expr %>% head()
 
-beatAML.expr <- beatAML.expr %>% merge(select(beatAML.meta, SampleID, LLS_SampleID), by.x='entity_id', by.y='SampleID') %>% mutate(lab_id=LLS_SampleID) %>% select(-LLS_SampleID)
+beatAML.expr <- beatAML.expr %>% gather(-lab_id, key='ENSEMBL_GENE', value='FPKM_LOG2_EXPR')
+
 beatAML.expr %>% head()
 ```
 
-
 # Targetome 
 
-Not sure if we need this, but it would be good to at least compare the above listed targets against Rory's data. 
+Need to use this to link beatAML targets  
+
+160 Unique Drugs with targets  
 
 --- 
 ### From Rory 
 ---
 
-#### targetome_DrugInformation_070617.txt
-- drugs by class/categories (ATC, EPC, etc) + FDA approval date
+#### targetome_DrugInformation_070617.txt  
+- drugs by class/categories (ATC, EPC, etc) + FDA approval date   
 
-#### targetome_DrugSynonymDictionary_100917.txt
-- mapping for drug->synonyms
-- includes chemical, brand, generic, proprietary, investigational names as available
-- note IMO it's best to use the full synonym dictionary because there is poor consistency about drug name usage :/
+#### targetome_DrugSynonymDictionary_100917.txt  
+- mapping for drug->synonyms    
+- includes chemical, brand, generic, proprietary, investigational names as available    
+- note IMO it's best to use the full synonym dictionary because there is poor consistency about drug name usage :/   
 
-#### targetome_Evidence_TIPS_101017.txt
-- includes target evidence for ~140 drugs
+#### targetome_Evidence_TIPS_101017.txt  
+- includes target evidence for ~140 drugs    
 
-#### targetome_FullEvidence_011019.txt
-- includes target evidence for ~170 drugs
-- this is all drugs we originally mined, note we subsetted to anti-neoplastic (ATC class with prefix "L01" for cancer targetome paper)
-- +small bug fix, there were a few rows with blank assay values due to a range of nM values being reported, added "range" flag to indicate
+#### targetome_FullEvidence_011019.txt  
+- includes target evidence for ~170 drugs    
+- this is all drugs we originally mined, note we subsetted to anti-neoplastic (ATC class with prefix "L01" for cancer targetome paper)    
+- +small bug fix, there were a few rows with blank assay values due to a range of nM values being reported, added "range" flag to indicate    
 
 ---
 
-Drug target information
-
-[more info](https://www.ncbi.nlm.nih.gov/pubmed/28964549)
+Drug targets - [more info](https://www.ncbi.nlm.nih.gov/pubmed/28964549)  
 
 #### References 
 
-Evidence-Based Precision Oncology with the Cancer Targetome. - PubMed - NCBI. https://www.ncbi.nlm.nih.gov/pubmed/28964549.
+Evidence-Based Precision Oncology with the Cancer Targetome. - PubMed - NCBI.   https://www.ncbi.nlm.nih.gov/pubmed/28964549.  
 
 ```{r}
 
@@ -364,81 +405,40 @@ targetome.drugsynonym <- as.data.frame(fread('./../data/targetome/Targetome_Drug
 targetome.evidence.tips <- as.data.frame(fread('./../data/targetome/Targetome_Evidence_TIPS_101017.txt', sep='\t'))
 targetome.evidence.full <- as.data.frame(fread('./../data/targetome/Targetome_FullEvidence_011019.txt', sep='\t'))
 
+beatAML.targetome.overlap <- as.data.frame(fread('./../data/targetome/Inhibitors_inCancerTargetome_110217.txt', sep='\t'))
+
 targetome.druginfo %>% head() 
 targetome.drugsynonym %>% head()
 targetome.evidence.tips %>% head()
 targetome.evidence.full %>% head()
+beatAML.targetome.overlap %>% head()
 
+#targetome.evidence.full$Drug %>% unique() %>% length() # 160
+
+# %>% select(Drug) %>% unique() %>% arrange(Drug) 
 ```
 
-# EDA 
 
-## CCLE Cell-Line Overlap
+## beatAML link targets 
 
-Does our CCLE gene expression have all the cell lines used in the gene dependency datasets? 
+combine targets from targetome (32 drugs) to our beatAML data. 
 
 ```{r}
+TIERS = c('III')
 
-cell.lines.exp <- CCLE.rnaSeq %>% select(cell_line) %>% unique() %>% drop_na() %>% arrange(cell_line) %>% .$cell_line
+beatAML.dat <- beatAML.drug %>% merge(beatAML.targetome.overlap, by.x='drug_name', by.y='CancerTargetome_Drug') %>% merge(targetome.evidence.full, by.x='InhibitorName_Panel', by.y='Drug') %>% filter(EvidenceLevel_Assigned %in% TIERS)  %>% select(drug_name, lab_id, response, response_type, Target_Name) %>% unique() %>% aggregate(Target_Name ~ drug_name + lab_id + response + response_type, data = ., paste, collapse = ";") %>% mutate(target = Target_Name, id=lab_id, id_type='lab_id') %>% select(-Target_Name, -lab_id)
 
-cell.lines.rnai <- rnai.dat %>% select(DepMap_ID) %>% unique() %>% drop_na() %>% .$DepMap_ID
-
-cell.lines.crispr <- crispr.dat %>% select(cell_line) %>% unique() %>% drop_na() %>% .$cell_line
-
-cell.lines.CCLE <- CCLE.dat %>% select(DepMap_ID) %>% unique() %>% drop_na() %>% arrange(DepMap_ID) %>% .$`DepMap_ID`
-
-cell.lines.GDSC <- GDSC.dat %>% select(CELL_LINE_NAME) %>% unique() %>% drop_na() %>% arrange(CELL_LINE_NAME) %>% .$CELL_LINE_NAME
-
-venn.diagram(
-  x = list(cell.lines.exp, cell.lines.rnai, cell.lines.crispr, cell.lines.CCLE),
-  category.names = c("CCLE EXPR" , "RNAi DEP" , "CRISPR DEP", "CCLE DRUG"),
-  filename = './figs/cell_line_venn.png',
-  output=T
-)
-
-venn.diagram(
-  x = list(cell.lines.exp, cell.lines.CCLE, cell.lines.GDSC),
-  category.names = c("CCLE EXPR", "CCLE DRUG", "GDSC DRUG"),
-  filename = './figs/cell_line_venn2.png',
-  output=T
-)
-
+beatAML.dat %>% head()
 ```
 
-Most of the cell lines from the dependency scores are in CCLE.EXPR
-![](./figs/cell_line_venn.png)
-
-
-FOR some reason the CCLE Drug data cell lines are not in the CCLE Expr dataset.  
-![](./figs/cell_line_venn2.png)
+## Combine Data 
 
 ```{r}
-cell.lines.exp[1:25]
-cell.lines.CCLE[1:25]
-cell.lines.GDSC[1:25]
+all.drug <- rbind(rnai.dat, crispr.dat, PRISM.dat, GDSC.dat, CTRP.dat, CCLE.dat, beatAML.dat)
+
+write.csv(all.drug, './../data/all_drug_data.csv', sep=',', row.names=F)
 ```
 
-## Gene Dependency Coverage 
-
-How many of the gene dependency assays overlap between the RNAi and CRISPR screens in our RNA expression? 
-
-```{r}
-genes.exp <- CCLE.rnaSeq %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
-
-genes.rnai <- rnai.dat %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
-
-genes.crispr <- crispr.dat %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
-
-venn.diagram(
-  x = list(genes.exp, genes.rnai, genes.crispr),
-  category.names = c("EXPR GENES" , "RNAi GENES" , "CRISPR GENES"),
-  filename = './figs/gene_venn.png',
-  output=T
-)
-
-```
-
-![](./figs/gene_venn.png)
 
 
 

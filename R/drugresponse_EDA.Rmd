@@ -1,0 +1,157 @@
+---
+title: "drug_response_EDA"
+author: "nathaniel evans"
+date: "November 7, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+library(VennDiagram)
+```
+
+# Overview 
+
+This script explores the combined datasets from: 
+  - GDSC 
+  - CCLE 
+  - CTRP: CTD2
+  - DEPMAP: PRISM
+  - DEPMAP: ACHILLES/AVANA
+  - DEPMAP: RNAi
+  - beatAML
+  
+For more information, see `Data_aggregation.Rmd` in the `./R/` directory.
+
+
+# Data in 
+
+```{r}
+drug.dat <- as.data.frame(fread('./../data/all_drug_data.csv', sep=',', header=T))
+```
+
+```{r}
+drug.dat %>% head()
+```
+
+## DATA DICTIONARY  
+
+#### colnames
+  - drug_name: name of drug 
+  - target: drug target (as provided by source datasets)
+  - response: response variable [AUC, DEP_SCORE, PRISM_SCORE]
+  - response_type: response variably type
+  - id: cell line or lab sample identifier 
+  - id_type: ID type 
+
+shape = (23345862 x 6)  
+
+# EDA 
+
+
+```{r}
+drug.dat %>% ggplot(aes(x=response, color=response_type)) + geom_density(alpha=0.4, size=1) + xlim(-3,15)
+```
+
+```{r}
+drug.dat %>% group_by(response_type) %>% count() %>% ggplot(aes(x=response_type, y=log10(n))) + geom_col() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+## num observations per dataset
+
+```{r}
+drug.dat %>% group_by(response_type) %>% count()
+```
+
+
+```{r}
+drug.dat %>% group_by(response_type) %>% summarize(unique.drugs=length(unique(drug_name)))
+```
+
+
+```{r}
+drug.dat %>% group_by(response_type) %>% summarize(unique.targets=length(unique(target)))
+```
+
+
+
+## CCLE Cell-Line Overlap
+
+Does our CCLE gene expression have all the cell lines used in the gene dependency datasets? 
+
+```{r}
+
+cell.lines.exp <- CCLE.rnaSeq %>% select(cell_line) %>% unique() %>% drop_na() %>% arrange(cell_line) %>% .$cell_line
+
+cell.lines.rnai <- rnai.dat %>% select(DepMap_ID) %>% unique() %>% drop_na() %>% .$DepMap_ID
+
+cell.lines.crispr <- crispr.dat %>% select(cell_line) %>% unique() %>% drop_na() %>% .$cell_line
+
+cell.lines.CCLE <- CCLE.dat %>% select(DepMap_ID) %>% unique() %>% drop_na() %>% arrange(DepMap_ID) %>% .$`DepMap_ID`
+
+cell.lines.GDSC <- GDSC.dat %>% select(CELL_LINE_NAME) %>% unique() %>% drop_na() %>% arrange(CELL_LINE_NAME) %>% .$CELL_LINE_NAME
+
+venn.diagram(
+  x = list(cell.lines.exp, cell.lines.rnai, cell.lines.crispr, cell.lines.CCLE),
+  category.names = c("CCLE EXPR" , "RNAi DEP" , "CRISPR DEP", "CCLE DRUG"),
+  filename = './figs/cell_line_venn.png',
+  output=T
+)
+
+venn.diagram(
+  x = list(cell.lines.exp, cell.lines.CCLE, cell.lines.GDSC),
+  category.names = c("CCLE EXPR", "CCLE DRUG", "GDSC DRUG"),
+  filename = './figs/cell_line_venn2.png',
+  output=T
+)
+
+```
+
+Most of the cell lines from the dependency scores are in CCLE.EXPR
+![](./figs/cell_line_venn.png)
+
+
+FOR some reason the CCLE Drug data cell lines are not in the CCLE Expr dataset.  
+![](./figs/cell_line_venn2.png)
+
+```{r}
+cell.lines.exp[1:25]
+cell.lines.CCLE[1:25]
+cell.lines.GDSC[1:25]
+```
+
+## Gene Dependency Coverage 
+
+How many of the gene dependency assays overlap between the RNAi and CRISPR screens in our RNA expression? 
+
+```{r}
+genes.exp <- CCLE.rnaSeq %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
+
+genes.rnai <- rnai.dat %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
+
+genes.crispr <- crispr.dat %>% select(gene) %>% unique() %>% drop_na() %>% .$gene
+
+venn.diagram(
+  x = list(genes.exp, genes.rnai, genes.crispr),
+  category.names = c("EXPR GENES" , "RNAi GENES" , "CRISPR GENES"),
+  filename = './figs/gene_venn.png',
+  output=T
+)
+
+```
+
+![](./figs/gene_venn.png)
