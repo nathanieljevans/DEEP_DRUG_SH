@@ -1,0 +1,163 @@
+---
+title: "GeneMania_network_setup_for_AttentionWalk"
+author: "nathaniel evans"
+date: "November 17, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+library(VennDiagram)
+```
+
+
+# GeneMania 
+
+This is a PPI, coexpression, predicted interaction, colocalization gene network database and visualization. 
+
+The data we're going to look at can be found [here](http://genemania.org/data/current/Homo_sapiens.COMBINED/). 
+
+More information can be found [here](http://pages.genemania.org/data/)
+
+---
+From genemania...  
+
+Combined Networks  
+A combined network integrates multiple individual GeneMANIA networks into a single large network. Currently the set of default networks, combined using the GO-based Biological Process method, are available for each organism. This network is used by GeneMANIA for finding genes similar to sets of query genes of size less than 6.  
+
+The combined networks are packaged for download separately from the organisms set of individual networks. As combined networks integrate the interactions between many individual networks they can be large in size. Combined networks are represented in a pair of files, one containing the network itself and the other containing the weights used to produce the combined network.  
+
+The integrated network is named "COMBINED.DEFAULT_NETWORKS.BP_COMBINING.txt". The file is organized the same way as the individual networks described above, with each line containing a pair of interacting genes and their weights.  
+
+The set of combination weights used to produce the integrated network are available in a file named "COMBINATION_WEIGHTS.DEFAULT_NETWORKS.BP_COMBINING.txt". This file contains 3 columns, the network group name, the network name, and the weight given to the network in the combined result. The individual networks themselves are available separately as described above.  
+
+---
+
+
+# Data in
+
+```{r}
+
+netwx <- as.data.frame(fread('./../data/genemania/COMBINED.DEFAULT_NETWORKS.BP_COMBINING.txt', sep='\t'))
+
+netwx %>% head()
+
+## To truncate for testing... 
+
+#netwx <- netwx %>% head(1000000)
+
+```
+
+Not sure how to interpret gene interactions... can't find info on genemania. 
+For now, we'll keep all the interactions. 
+
+```{r}
+
+netwx %>% ggplot(aes(x=log10(Weight))) + geom_density()
+
+```
+
+```{r}
+t <- netwx$Weight %>% quantile(c(0.997))
+t
+
+tmp <- netwx %>% filter(Weight > t)
+
+gene_set <- unique(c(tmp$Gene_A, tmp$Gene_B))
+
+netwx <- netwx %>% filter(Gene_A %in% gene_set & Gene_B %in% gene_set)
+
+num_interactions <- netwx$Gene_A %>% length() # 6,979,630 gene interactions
+num_interactions 
+num_genes <-  c(netwx$Gene_A, netwx$Gene_B) %>% unique() %>% length() # 19551 genes 
+num_genes
+```
+
+
+```{r}
+
+node_id_mapping <- c(netwx$Gene_A, netwx$Gene_B) %>% unique() %>% data.frame(gene_name=.) %>% mutate(node_id=seq(0,num_genes-1))
+
+node_1 <- netwx %>% select(Gene_A) %>% merge(node_id_mapping, by.x='Gene_A', by.y='gene_name', all.x=T) %>% .$node_id
+
+node_2 <- netwx %>% select(Gene_B) %>% merge(node_id_mapping, by.x='Gene_B', by.y='gene_name', all.x=T) %>% .$node_id
+
+mapped_netx <- data.frame(node_1, node_2)
+
+```
+
+```{r}
+node_1 %>% head()
+
+node_2 %>% head() 
+
+node_id_mapping %>% head()
+
+mapped_netx %>% head()
+
+```
+
+
+```{r}
+mapped_netx <- mapped_netx %>% arrange(node_1)
+
+mapped_netx %>% write_delim('./../data/genemania/GeneMania_AttentionWalk_input_all.csv', delim=',')
+
+node_id_mapping %>% write_delim('./../data/genemania/node_id_mapping.csv', delim=',')
+```
+
+Getting the error: `RuntimeError: The size of tensor a (978) must match the size of tensor b (1001) at non-singleton dimension 1` 
+
+and I suspect it's because I have multiple graphs (disconnected vertices) in my plot. To test this we'll parse them out into separate groups. 
+
+
+```{python}
+import pandas as pd 
+
+netx = pd.read_csv('./../data/genemania/GeneMania_AttentionWalk_input_all.csv')
+
+left = set(netx['node_1'])
+right = set(netx['node_2'])
+
+print((len(left),len(right)))
+
+```
+
+
+# Running AttentionWalk 
+
+edge_path = C:\Users\Nate\Documents\DEEP_DRUG_SH\data\genemania\GeneMania_AttentionWalk_input_1k.csv
+
+output = C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\embedding.csv
+
+attention path = C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\attention.csv
+
+
+```{bash}
+
+python src\main.py --dimensions 2 --edge-path C:\Users\Nate\Documents\DEEP_DRUG_SH\data\genemania\GeneMania_AttentionWalk_input_all.csv --embedding-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\embedding_999Q__experiments.csv --attention-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\attention.csv --learning-rate 0.01 --epochs 5 --gamma 0.5 --beta 0.5 --num-of-walks 100 --window-size 10
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

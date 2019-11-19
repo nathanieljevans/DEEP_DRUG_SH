@@ -20,6 +20,7 @@ library(tidyr)
 library(ggplot2)
 library(data.table)
 library(VennDiagram)
+library(readr)
 
 ```
 
@@ -129,6 +130,11 @@ Mahmoud Ghandi, Franklin W. Huang, Judit Jané-Valbuena, Gregory V. Kryukov, ... 
 CCLE.rnaSeq <- as.data.frame(fread('./../data/CCLE_expression.csv', sep=',')) %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, expression = value) %>% select(-V1, -value) %>% separate(gene, into = c("HGNC_sym", "entrez_id"), sep = " \\(") %>% mutate(entrez_id=substr(entrez_id, 1, nchar(entrez_id)-1))
 
 CCLE.rnaSeq %>% head()
+```
+
+
+```{r}
+CCLE.rnaSeq %>% write_delim('./../data/processed/depmap_expression.csv', delim=',')
 ```
 
 # Pooled Drug Response (PRISM)
@@ -362,7 +368,13 @@ beatAML.expr %>% head()
 beatAML.expr <- beatAML.expr %>% gather(-lab_id, key='ENSEMBL_GENE', value='FPKM_LOG2_EXPR')
 
 beatAML.expr %>% head()
+
 ```
+
+```{r}
+beatAML.expr %>% write_delim('./../data/processed/beataml_expr.csv', delim=',')
+```
+
 
 # Targetome 
 
@@ -424,6 +436,8 @@ beatAML.targetome.overlap %>% head()
 combine targets from targetome (32 drugs) to our beatAML data. 
 
 ```{r}
+
+# which tiers do we want to include in our targets 
 TIERS = c('III')
 
 beatAML.dat <- beatAML.drug %>% merge(beatAML.targetome.overlap, by.x='drug_name', by.y='CancerTargetome_Drug') %>% merge(targetome.evidence.full, by.x='InhibitorName_Panel', by.y='Drug') %>% filter(EvidenceLevel_Assigned %in% TIERS)  %>% select(drug_name, lab_id, response, response_type, Target_Name) %>% unique() %>% aggregate(Target_Name ~ drug_name + lab_id + response + response_type, data = ., paste, collapse = ";") %>% mutate(target = Target_Name, id=lab_id, id_type='lab_id') %>% select(-Target_Name, -lab_id)
@@ -436,7 +450,7 @@ beatAML.dat %>% head()
 ```{r}
 all.drug <- rbind(rnai.dat, crispr.dat, PRISM.dat, GDSC.dat, CTRP.dat, CCLE.dat, beatAML.dat)
 
-write.csv(all.drug, './../data/all_drug_data.csv', sep=',', row.names=F)
+write_delim(all.drug, './../data/processed/all_resp_data.csv', delim=',')
 ```
 
 

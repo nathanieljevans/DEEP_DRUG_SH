@@ -87,6 +87,17 @@ drug.dat %>% group_by(response_type) %>% summarize(unique.drugs=length(unique(dr
 drug.dat %>% group_by(response_type) %>% summarize(unique.targets=length(unique(target)))
 ```
 
+## Expr gene variance ranking 
+
+```{r}
+CCLE.rnaSeq %>% head()
+
+top.n.var.genes <- CCLE.rnaSeq %>% select(-entrez_id) %>% group_by(HGNC_sym) %>% summarize(expr_var=var(expression)) %>% arrange(desc(expr_var)) %>% head(20)
+
+for (gene in top.n.var.genes$HGNC_sym) {
+  print(gene)
+}
+```
 
 
 ## CCLE Cell-Line Overlap
