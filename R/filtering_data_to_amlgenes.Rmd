@@ -1,0 +1,91 @@
+---
+title: "filter_all_data_to_aml_genes_to_use"
+author: "nathaniel evans"
+date: "November 25, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+library(readr)
+```
+
+
+
+```{r}
+gene.id.map <- data.frame(fread('../data/processed/gene_id_map.csv'))
+gene.id.map %>% head()
+```
+
+lost a few genes in the merge ... 
+
+```{r}
+aml.genes.to.use <- data.frame(fread('../data/processed/aml_genes_to_use.csv')) %>% merge(gene.id.map, by.x='x', by.y='ensembl_id') %>% mutate(ensebml_id = x) %>% select(-x)
+
+aml.genes.to.use %>% head()
+```
+
+
+
+```{r}
+depmap.expr <- data.frame(fread('../data/processed/depmap_expression.csv'))
+depmap.expr %>% head()
+```
+
+```{r}
+depmap.expr.aml.genes <- depmap.expr %>% merge(aml.genes.to.use)
+depmap.expr.aml.genes %>% head()
+```
+
+```{r}
+depmap.expr.aml.genes %>% write.csv('../data/processed/data2/depmap_expr_amlgenes.csv', row.names=F)
+```
+
+## now onto beataml
+
+```{r}
+beataml.expr <- data.frame(fread('../data/processed/beataml_expr.csv'))
+beataml.expr %>% head()
+```
+
+```{r}
+beataml.expr.aml.genes <- beataml.expr %>% merge(aml.genes.to.use)
+beataml.expr.aml.genes %>% head()
+```
+
+```{r}
+beataml.expr.aml.genes %>% write.csv('../data/processed/data2/beataml_expr_amlgenes.csv', row.names=F)
+```
+
+
+## last but not least, the drug data ... 
+
+```{r}
+all.drug.data <- data.frame(fread('../data/processed/all_resp_data.csv'))
+all.drug.data %>% head()
+```
+
+```{r}
+drug.data.aml.genes <- all.drug.data %>% separate(target, into=c('HGNC_sym', 'entrez_id')) %>% merge(aml.genes.to.use)
+drug.data.aml.genes %>% head()
+```
+
+```{r}
+drug.data.aml.genes %>% write.csv('../data/processed/data2/drug_data_aml_genes.csv')
+```
+
+
+
+
+
+
+
+
+
+
+

@@ -65,7 +65,7 @@ netwx %>% ggplot(aes(x=log10(Weight))) + geom_density()
 ```
 
 ```{r}
-t <- netwx$Weight %>% quantile(c(0.997))
+t <- netwx$Weight %>% quantile(c(0.9999))
 t
 
 tmp <- netwx %>% filter(Weight > t)
@@ -108,7 +108,7 @@ mapped_netx %>% head()
 ```{r}
 mapped_netx <- mapped_netx %>% arrange(node_1)
 
-mapped_netx %>% write_delim('./../data/genemania/GeneMania_AttentionWalk_input_all.csv', delim=',')
+mapped_netx %>% write_delim('./../data/genemania/GeneMania_AttentionWalk_input_small.csv', delim=',')
 
 node_id_mapping %>% write_delim('./../data/genemania/node_id_mapping.csv', delim=',')
 ```
@@ -142,7 +142,11 @@ attention path = C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\att
 
 ```{bash}
 
-python src\main.py --dimensions 2 --edge-path C:\Users\Nate\Documents\DEEP_DRUG_SH\data\genemania\GeneMania_AttentionWalk_input_all.csv --embedding-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\embedding_999Q__experiments.csv --attention-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\attention.csv --learning-rate 0.01 --epochs 5 --gamma 0.5 --beta 0.5 --num-of-walks 100 --window-size 10
+python src\main.py --dimensions 2 --edge-path C:\Users\Nate\Documents\DEEP_DRUG_SH\data\genemania\GeneMania_AttentionWalk_input_small.csv --embedding-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\embedding_999Q__experiments.csv --attention-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\attention.csv --learning-rate 0.01 --epochs 50 --gamma 0.5 --beta 0.5 --num-of-walks 100 --window-size 5
+
+
+# large network
+python src\main.py --dimensions 2 --edge-path C:\Users\Nate\Documents\DEEP_DRUG_SH\data\genemania\GeneMania_AttentionWalk_input_all.csv --embedding-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\embedding_999Q__experiments.csv --attention-path C:\Users\Nate\Documents\DEEP_DRUG_SH\gene_network_embedding\attention.csv --learning-rate 0.01 --epochs 5 --gamma 0.5 --beta 0.5 --num-of-walks 100 --window-size 5
 
 ```
 

@@ -127,11 +127,22 @@ But What type of normalization? [TPM,RPKM]
 Mahmoud Ghandi, Franklin W. Huang, Judit Jané-Valbuena, Gregory V. Kryukov, ... Todd R. Golub, Levi A. Garraway & William R. Sellers. 2019. Next-generation characterization of the Cancer Cell Line Encyclopedia. Nature 569, 503-508 (2019).
 
 ```{r}
-CCLE.rnaSeq <- as.data.frame(fread('./../data/CCLE_expression.csv', sep=',')) %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, expression = value) %>% select(-V1, -value) %>% separate(gene, into = c("HGNC_sym", "entrez_id"), sep = " \\(") %>% mutate(entrez_id=substr(entrez_id, 1, nchar(entrez_id)-1))
+CCLE.rnaSeq <- as.data.frame(fread('./../data/CCLE_expression.csv', sep=',')) %>% pivot_longer(-V1, names_to='gene') %>% mutate(cell_line = V1, expression = value) %>% select(-V1, -value) %>% separate(gene, into = c("HGNC_sym", "entrez_id"), sep = " \\(") %>% mutate(entrez_id=substr(entrez_id, 1, nchar(entrez_id)-1)) %>% merge(map, by='entrez_id', all.x=T)
 
 CCLE.rnaSeq %>% head()
 ```
 
+```{r}
+map <- data.frame(fread('../data/processed/entrez_to_ensembl_mapping.csv'))
+
+map2 <- CCLE.rnaSeq %>% select(HGNC_sym, entrez_id) %>% unique() %>% merge(map, by='entrez_id', all.x=T, all.y=F) 
+
+map2 %>% head()
+```
+
+```{r}
+write.csv(map2, '../data/processed/gene_id_map.csv', row.names=F)
+```
 
 ```{r}
 CCLE.rnaSeq %>% write_delim('./../data/processed/depmap_expression.csv', delim=',')
@@ -329,7 +340,7 @@ beatAML.drug %>% head()
 
 Still need to convert Ensembl gene IDs to gene name (that depmap uses) and filter to set union on DepMap expr data
 
-**NOTE:** beatAML expression data is in RPKM, but DepMap expression data is in TPM.   
+**NOTE:** beatAML expression data is in log2 RPKM, but DepMap expression data is in TPM.   
 
 ## Data Access & Processing   
 
@@ -365,7 +376,11 @@ beatAML.expr <- as.data.frame(fread('./../data/beatAML_EXPR_FPKM.csv', sep=','))
 
 beatAML.expr %>% head()
 
-beatAML.expr <- beatAML.expr %>% gather(-lab_id, key='ENSEMBL_GENE', value='FPKM_LOG2_EXPR')
+```
+
+```{r}
+
+beatAML.expr <- beatAML.expr %>% gather(-lab_id, key='ensembl_id', value='expression') %>% separate(ensembl_id, into=c('ensembl_id', 'ensembl_id_version')) %>% merge(map2, by='ensembl_id', all.x=T)
 
 beatAML.expr %>% head()
 

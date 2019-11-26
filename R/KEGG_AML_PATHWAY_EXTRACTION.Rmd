@@ -1,0 +1,149 @@
+---
+title: "KEGG_AML_PATHWAY_PROCESSING"
+author: "nathaniel evans"
+date: "November 25, 2019"
+output:
+  html_document: 
+    theme: flatly 
+    highlight: kate
+    toc: true
+    toc_depth: 2
+    toc_float : true
+    smooth_scroll: true
+    number_sections : false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+library(VennDiagram)
+library(readr)
+```
+
+# Overview 
+
+Use [this](https://www.genome.jp/kegg-bin/show_pathway?hsa05221) reference to extract all genes involved in AML pathway. 
+
+
+
+# Extract Pathway Gene Names 
+
+The code below was modified from `terdon`'s [post](https://bioinformatics.stackexchange.com/questions/2561/how-can-i-extract-gene-names-for-a-metabolic-pathway-from-kegg)
+
+```{python}
+
+import urllib.request
+import re
+import sys
+
+pathway = 'hsa05221' # acute myeloid leukemia 
+
+url = "http://rest.kegg.jp/get/" + pathway
+
+genes = []
+
+with urllib.request.urlopen(url) as f:
+  lines = f.read().decode('utf-8').splitlines()
+  want = 0
+  for line in lines:
+    fields = line.split()
+    ## The list of genes starts here
+    if fields[0] == 'GENE':
+      want = 1
+      ## The line with GENE is different
+      g = fields[2].rstrip(';')
+      print(g)
+      genes.append(g)
+    ## We reached the next section of the file
+    elif want == 1 and re.match('^\S', line):
+      break
+      #sys.exit();
+    ## We're still in the list of genes
+    if want == 1 and len(fields)>1:
+      g = fields[1].rstrip(';')
+      print(g)
+      genes.append(g)
+      
+      
+print('Number of genes in Kegg pathway: %s' %pathway)
+print(len(genes))
+
+with open('../data/processed/%s_genes.txt' %pathway, 'w') as f: 
+  for g in genes: 
+    f.write('%s\n' %str(g))
+```
+
+# Find related genes from GeneMania + interaction data 
+
+genemania interaction [network](https://genemania.org/search/homo-sapiens/KIT/3815/FLT3/PIK3CA/PIK3CD/PIK3CB/PIK3R1/PIK3R2/PIK3R3/AKT1/AKT2/AKT3/CHUK/IKBKB/IKBKG/NFKB1/RELA/BAD/MTOR/EIF4EBP1/RPS6KB1/RPS6KB2/GRB2/SOS1/SOS2/HRAS/NRAS/KRAS/ARAF/BRAF/RAF1/MAP2K1/MAP2K2/MAPK1/MAPK3/STAT3/STAT5A/STAT5B/PIM1/PIM2/RUNX1/CSF1R/MPO/CSF2/IL3/RUNX1T1/PML/RARA/ZBTB16/CEBPA/PER2/SPI1/CD14/ITGAM/FCGR1A/CEBPE/BCL2A1/CCNA2/CCNA1/MYC/DUSP6/JUP/TCF7/TCF7L1/TCF7L2/LEF1/CCND1/PPARD/)
+
+Remember: edge `weight` is a predictor for the interpretation of relevant gene function. Careful using it for meaning in our model. 
+
+For some reason this doesn't seem to be returning all interactions, only interactions between the genes we gave it (+ a few others)
+
+```{r}
+# edge 'weight'
+
+aml.genes <- data.frame(fread('../data/processed/hsa05221_genes.txt', header=F))$V1 
+aml.genes %>% head()
+
+int.aml <- data.frame(fread('../data/genemania/genemania-interactions_hsa05221.txt')) 
+int.aml %>% head()
+
+```
+
+
+```{r}
+all.genes <- int.aml$Gene.1 %>% c(int.aml$Gene.2) %>% unique()
+all.genes %>% length()
+```
+
+# load our gene map 
+
+```{r}
+gene.id.map <- data.frame(fread('../data/processed/gene_id_map.csv'))
+gene.id.map %>% head()
+```
+
+# convert genes to use to ensembl
+
+```{r}
+aml.genes <- data.frame(aml.genes) %>% merge(gene.id.map, by.x='aml.genes', by.y = 'HGNC_sym')
+aml.genes %>% head()
+```
+
+
+# Search all interactions from genemania
+
+```{r}
+
+all.aml.interactions <- as.data.frame(fread('./../data/genemania/COMBINED.DEFAULT_NETWORKS.BP_COMBINING.txt', sep='\t')) %>% filter(Gene_A %in% aml.genes$ensembl_id | Gene_B %in% aml.genes$ensembl_id) 
+```
+
+```{r}
+
+all.aml.interactions2 <- all.aml.interactions %>% filter(Weight > quantile(all.aml.interactions$Weight, 0.992)) %>% select(-Weight)
+
+all.aml.interactions2 %>% head() 
+
+genes.to.use <- c(all.aml.interactions2$Gene_A, all.aml.interactions2$Gene_B) %>% unique()
+length(genes.to.use)
+```
+```{r}
+write.csv(genes.to.use, '../data/processed/aml_genes_to_use.csv', row.names=F)
+```
+
+```{r}
+interactions.to.use <- all.aml.interactions %>% filter(Gene_A %in% genes.to.use & Gene_B %in% genes.to.use)
+
+write.csv(interactions.to.use, '../data/processed/genemania_amlgene_interactions.csv', row.names=F) 
+```
+
+
+
+
+
