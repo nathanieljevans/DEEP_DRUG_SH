@@ -25,7 +25,7 @@ gene.id.map %>% head()
 lost a few genes in the merge ... 
 
 ```{r}
-aml.genes.to.use <- data.frame(fread('../data/processed/aml_genes_to_use.csv')) %>% merge(gene.id.map, by.x='x', by.y='ensembl_id') %>% mutate(ensebml_id = x) %>% select(-x)
+aml.genes.to.use <- data.frame(fread('../data/processed/aml_genes_to_use.csv')) %>% merge(gene.id.map, by.x='x', by.y='ensembl_id') %>% mutate(ensembl_id = x) %>% select(-x)
 
 aml.genes.to.use %>% head()
 ```
@@ -71,12 +71,23 @@ all.drug.data %>% head()
 ```
 
 ```{r}
-drug.data.aml.genes <- all.drug.data %>% separate(target, into=c('HGNC_sym', 'entrez_id')) %>% merge(aml.genes.to.use)
-drug.data.aml.genes %>% head()
+all.drug.data$response_type %>% unique()
 ```
 
 ```{r}
-drug.data.aml.genes %>% write.csv('../data/processed/data2/drug_data_aml_genes.csv')
+drug.data.aml.genes <- all.drug.data %>% separate(target, into=c('HGNC_sym', 'entrez_id')) %>% merge(aml.genes.to.use, all.x = T) 
+```
+
+
+```{r}
+drug.data.aml.genes2 <- drug.data.aml.genes %>% filter(!is.na(ensembl_id) | response_type == 'beatAML_AUC')
+drug.data.aml.genes2 %>% head()
+
+drug.data.aml.genes2 %>% filter(response_type == 'beatAML_AUC' & drug_name == 'Dasatinib') %>% select(entrez_id) %>% unique()
+```
+
+```{r}
+drug.data.aml.genes2 %>% write.csv('../data/processed/data2/drug_data_aml_genes.csv')
 ```
 
 
