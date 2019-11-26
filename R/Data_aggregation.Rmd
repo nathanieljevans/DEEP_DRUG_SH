@@ -457,13 +457,13 @@ combine targets from targetome (32 drugs) to our beatAML data.
 # which tiers do we want to include in our targets 
 TIERS = c('III')
 
-beatAML.dat <- beatAML.drug %>% merge(beatAML.targetome.overlap, by.x='drug_name', by.y='CancerTargetome_Drug') 
-          %>% merge(targetome.evidence.full, by.x='InhibitorName_Panel', by.y='Drug') 
-          %>% filter(EvidenceLevel_Assigned %in% TIERS)  
-          %>% select(drug_name, lab_id, response, response_type, Target_Name) 
-          %>% unique() 
-          %>% aggregate(Target_Name ~ drug_name + lab_id + response + response_type, data = ., paste, collapse = ";")
-          %>% mutate(target = Target_Name, id=lab_id, id_type='lab_id') %>% select(-Target_Name, -lab_id)
+beatAML.dat <- beatAML.drug %>% merge(beatAML.targetome.overlap, by.x='drug_name', by.y='CancerTargetome_Drug') %>%
+  merge(targetome.evidence.full, by.x='InhibitorName_Panel', by.y='Drug') %>% 
+  filter(EvidenceLevel_Assigned %in% TIERS) %>% 
+  select(drug_name, lab_id, response, response_type, Target_Name) %>% 
+  unique() %>% 
+  aggregate(Target_Name ~ drug_name + lab_id + response + response_type, data = ., paste, collapse = ";") %>% 
+  mutate(target = Target_Name, id=lab_id, id_type='lab_id') %>% select(-Target_Name, -lab_id)
 
 beatAML.dat %>% head()
 ```

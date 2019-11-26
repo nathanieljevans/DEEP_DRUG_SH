@@ -13,6 +13,7 @@ library(tidyr)
 library(ggplot2)
 library(data.table)
 library(readr)
+library(utils)
 ```
 
 
@@ -75,19 +76,28 @@ all.drug.data$response_type %>% unique()
 ```
 
 ```{r}
-drug.data.aml.genes <- all.drug.data %>% separate(target, into=c('HGNC_sym', 'entrez_id')) %>% merge(aml.genes.to.use, all.x = T) 
+drug.data.aml.genes <- all.drug.data %>% separate(target, into=c('target', 'target(entrez)'), sep='[()]')
+drug.data.aml.genes %>% head()
 ```
 
+For some reason the crispr and rnai HGNC targets aren't found in the HGNC aml genes... but are if we use entrez ids 
 
 ```{r}
-drug.data.aml.genes2 <- drug.data.aml.genes %>% filter(!is.na(ensembl_id) | response_type == 'beatAML_AUC')
+nonaml.data <- drug.data.aml.genes %>% filter(id_type == 'DepMap_ID') %>% filter(target %in% aml.genes.to.use$HGNC_sym | `target(entrez)` %in% aml.genes.to.use$entrez_id)
+
+aml.data <- drug.data.aml.genes %>% filter(id_type != 'DepMap_ID') #%>% filter(sapply(target, is.in.aml.genes, ii=seq(length(drug.data.aml.genes$target)) ))
+
+drug.data.aml.genes2 <- rbind(nonaml.data, aml.data)
+
 drug.data.aml.genes2 %>% head()
-
-drug.data.aml.genes2 %>% filter(response_type == 'beatAML_AUC' & drug_name == 'Dasatinib') %>% select(entrez_id) %>% unique()
 ```
 
 ```{r}
-drug.data.aml.genes2 %>% write.csv('../data/processed/data2/drug_data_aml_genes.csv')
+drug.data.aml.genes2 %>% select(response_type) %>% group_by(response_type) %>% count()
+```
+
+```{r}
+drug.data.aml.genes2 %>% write.csv('../data/processed/data2/drug_data_aml_genes.csv', row.names = F)
 ```
 
 

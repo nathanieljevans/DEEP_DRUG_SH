@@ -31,10 +31,10 @@ class expr_data:
         genes <list> - entrez gene ids, in the order to have expression values listed
         '''
         if id in self.holder:
-            print(f'returning from memory, size of holder: {len(self.holder)}')
+            #print(f'returning from memory, size of holder: {len(self.holder)}')
             return self.holder[id]
         else:
-            print('returning novel expr')
+            #print('returning novel expr')
             if source == 'DepMap_ID':
                 df = self.depmap[self.depmap.cell_line == id]
                 arr = np.array([self.handle_me_this(df[df.ensembl_id == g].expression) for g in self.order])
@@ -66,6 +66,7 @@ class drug_data:
         '''
         self.drug = pd.read_csv(path)
         self.toensembl = toensembl
+        self.holder = dict()
 
     def get_targets(self, gene_order):
         '''
@@ -73,19 +74,36 @@ class drug_data:
 
         make this a generator: yield (targets, id, data source, response type, response)
         '''
-        for _, tHGNC, tENTREZ, drugname, response, response_type, id, id_type, tENSEMBL in self.drug.values:
-            if (id_type == 'DepMap_ID'):
-                targets = [1*(tENSEMBL==g) for g in gene_order]
-            else:
-                ## beatAML targets (may be multiple)
-                targets = tHGNC
-                if ';' in targets:
-                    targets = targets.split(';')
+        print(self.drug.head())
+        for drugname, tHGNC, tENTREZ, response, response_type, id, id_type in self.drug.values:
+            tHGNC = tHGNC.strip()
+            try:
+                if tHGNC in self.holder:
+                    targets = self.holder[tHGNC]
                 else:
-                    targets = [targets]
-                targets = [1 if self.toensembl[g] in targets else 0 for g in gene_order]
+                    if (id_type == 'DepMap_ID'):
+                        targets = [1*(self.convert_HGNC_to_ENSEMBL(tHGNC)==g) for g in gene_order]
+                    else:
+                        ## beatAML targets (may be multiple)
+                        if ';' in tHGNC:
+                            targets = targets.split(';')
+                        else:
+                            targets = [tHGNC]
+                        targets = [1 if self.convert_HGNC_to_ENSEMBL(g) in targets else 0 for g in gene_order]
+                    self.holder[tHGNC] = targets
+                    assert np.sum(targets) > 0, 'target vector is all zeros'
 
-            yield (targets, id, id_type, response_type, response)
+                yield (targets, id, id_type, response_type, response)
+            except AssertionError:
+                pass
+
+    def convert_HGNC_to_ENSEMBL(self, gene):
+        '''
+        '''
+        try:
+            return self.toensembl[gene]
+        except KeyError:
+            return None
 
 
 class file_name_tracker:
@@ -131,7 +149,6 @@ def make_toensembl(p):
 
     '''
     idmap = pd.read_csv(p)
-    print(idmap.head())
     toensembl = dict()
     for _,entrez,HGNC,ensembl in idmap.values:
         #print(gene)
@@ -146,9 +163,7 @@ if __name__ == '__main__':
     unpack_data2()
 
     order = pd.read_csv('../data2/aml_genes_to_use.csv')['x'].values.tolist() ## load gene order (genes_to_use)
-    print(order[0:5])
     ngenes = len(order)
-    print(ngenes)
     obs_size = (ngenes, 2)
 
     toensembl = make_toensembl('../data2/gene_id_map.csv')
@@ -167,11 +182,11 @@ if __name__ == '__main__':
         pyt = torch.Tensor(obs)
         torch.save(pyt, f'../data_pytorch/tensors/{obs_name}.pt')
         ii += 1
-        if ii == 5: break
+        #if ii == 5: break
 
     label_dict = namer.get_label_dict()
     f = open("../data_pytorch/label_dict.pkl","wb")
     pickle.dump(label_dict,f)
     f.close()
 
-    print(label_dict)
+    #print(label_dict)
