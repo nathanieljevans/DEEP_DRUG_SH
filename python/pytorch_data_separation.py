@@ -41,7 +41,7 @@ class expr_data:
                 self.holder[id] = arr
                 return arr
             elif source == 'lab_id':
-                df = self.depmap[self.beataml.lab_id == id]
+                df = self.beataml[self.beataml.lab_id == id]
                 arr = np.array([self.handle_me_this(df[df.ensembl_id == g].expression) for g in self.order])
                 self.holder[id] = arr
                 return arr
@@ -60,13 +60,21 @@ class expr_data:
 
 
 class drug_data:
-    def __init__(self, path, toensembl):
+    def __init__(self, path, toensembl, start=0):
         '''
         load drug data into memory
         '''
         self.drug = pd.read_csv(path)
+
+        ### JUST FOR TESTING - filter to beataml data
+        #print(self.drug.head())
+        #self.drug = self.drug[self.drug.id_type != 'DepMap_ID']
+        #print(self.drug.head())
+        ######################
+
         self.toensembl = toensembl
         self.holder = dict()
+        self.start = 0
 
     def get_targets(self, gene_order):
         '''
@@ -74,8 +82,7 @@ class drug_data:
 
         make this a generator: yield (targets, id, data source, response type, response)
         '''
-        print(self.drug.head())
-        for drugname, tHGNC, tENTREZ, response, response_type, id, id_type in self.drug.values:
+        for drugname, tHGNC, tENTREZ, response, response_type, id, id_type in self.drug.values[self.start:, :]:
             tHGNC = tHGNC.strip()
             try:
                 if tHGNC in self.holder:
@@ -86,7 +93,7 @@ class drug_data:
                     else:
                         ## beatAML targets (may be multiple)
                         if ';' in tHGNC:
-                            targets = targets.split(';')
+                            targets = tHGNC.split(';')
                         else:
                             targets = [tHGNC]
                         targets = [1 if self.convert_HGNC_to_ENSEMBL(g) in targets else 0 for g in gene_order]
@@ -108,12 +115,16 @@ class drug_data:
 
 class file_name_tracker:
 
-    def __init__ (self, start=0):
+    def __init__ (self, label_dict=None):
         '''
         start <int> - unique identifier; for use if appending to current data sets
         '''
-        self.incr = start
-        self.label_dict = dict()
+        if label_dict is not None:
+            self.incr = max(label_dict.keys())
+            self.label_dict = label_dict
+        else:
+            self.incr = 0
+            self.label_dict = dict()
 
     def get_name(self, id, source, response_type, response):
         '''
@@ -162,6 +173,14 @@ if __name__ == '__main__':
     '''
     unpack_data2()
 
+    # check for label_dict and load in
+    LOAD_DICT_AND_CONT = False
+    label_dict=None
+    if os.path.exists('../data_pytorch/label_dict.pkl') and LOAD_DICT_AND_CONT:
+        print('loading label_dict from file and continuing from last file...')
+        with open('../data_pytorch/label_dict.pkl', 'rb') as f:
+            label_dict = pickle.load(f)
+
     order = pd.read_csv('../data2/aml_genes_to_use.csv')['x'].values.tolist() ## load gene order (genes_to_use)
     ngenes = len(order)
     obs_size = (ngenes, 2)
@@ -170,23 +189,30 @@ if __name__ == '__main__':
 
     expr = expr_data(depmap_path = '../data2/depmap_expr_amlgenes.csv', beataml_path = '../data2/beataml_expr_amlgenes.csv', gene_order = order)
     drug = drug_data('../data2/drug_data_aml_genes.csv', toensembl)
-    namer = file_name_tracker()
+    namer = file_name_tracker(label_dict=label_dict)
 
-    ii = 0
-    for targets, id, id_type, response_type, response in drug.get_targets(order):
-        print(f'working ... count={ii}', end='\r')
-        obs = np.zeros(obs_size)
-        obs[:,0] = expr.get_expr(id=id, source=id_type, gene_order=order)
-        obs[:,1] = targets
-        obs_name = namer.get_name(id, id_type, response_type, response)
-        pyt = torch.Tensor(obs)
-        torch.save(pyt, f'../data_pytorch/tensors/{obs_name}.pt')
-        ii += 1
-        #if ii == 5: break
+    try:
+        ii = 0
+        for targets, id, id_type, response_type, response in drug.get_targets(order):
+            print(f'working ... count={ii}', end='\r')
+            obs = np.zeros(obs_size)
+            obs[:,0] = expr.get_expr(id=id, source=id_type, gene_order=order)
+            obs[:,1] = targets
+            obs_name = namer.get_name(id, id_type, response_type, response)
+            pyt = torch.Tensor(obs)
+            torch.save(pyt, f'../data_pytorch/tensors/{obs_name}.pt')
+            ii += 1
+            #if ii == 5: break
 
-    label_dict = namer.get_label_dict()
-    f = open("../data_pytorch/label_dict.pkl","wb")
-    pickle.dump(label_dict,f)
-    f.close()
+        label_dict = namer.get_label_dict()
+        f = open("../data_pytorch/label_dict.pkl","wb")
+        pickle.dump(label_dict,f)
+        f.close()
+    except:
+        label_dict = namer.get_label_dict()
+        f = open("../data_pytorch/label_dict.pkl","wb")
+        pickle.dump(label_dict,f)
+        f.close()
+        raise
 
     #print(label_dict)
