@@ -24,29 +24,34 @@ class expr_data:
         self.depmap =  pd.read_csv(depmap_path)
         self.beataml = pd.read_csv(beataml_path)
         self.holder = dict()
+        self.failures = []
 
     def get_expr(self, id, source, gene_order):
         '''
         source <str> [beataml, depmap] - which expression dataset to retrieve from
         genes <list> - entrez gene ids, in the order to have expression values listed
         '''
-        if id in self.holder:
-            #print(f'returning from memory, size of holder: {len(self.holder)}')
-            return self.holder[id]
-        else:
-            #print('returning novel expr')
-            if source == 'DepMap_ID':
-                df = self.depmap[self.depmap.cell_line == id]
-                arr = np.array([self.handle_me_this(df[df.ensembl_id == g].expression) for g in self.order])
-                self.holder[id] = arr
-                return arr
-            elif source == 'lab_id':
-                df = self.beataml[self.beataml.lab_id == id]
-                arr = np.array([self.handle_me_this(df[df.ensembl_id == g].expression) for g in self.order])
-                self.holder[id] = arr
-                return arr
+        try:
+            if id in self.holder:
+                #print(f'returning from memory, size of holder: {len(self.holder)}')
+                return self.holder[id]
             else:
-                raise ValueError(f'source must be [DepMap_ID, lab_id], got: {source}')
+                #print('returning novel expr')
+                if source == 'DepMap_ID':
+                    df = self.depmap[self.depmap.cell_line == id]
+                    arr = np.array([self.handle_me_this(df[df.ensembl_id == g].expression) for g in self.order])
+                    self.holder[id] = arr
+                elif source == 'lab_id':
+                    df = self.beataml[self.beataml.lab_id == id]
+                    arr = np.array([self.handle_me_this(df[df.ensembl_id == g].expression) for g in self.order])
+                    self.holder[id] = arr
+                else:
+                    raise ValueError(f'source must be [DepMap_ID, lab_id], got: {source}')
+
+            assert np.sum(arr) > 0, 'expression vector is zero'
+            return arr
+        except AssertionError:
+            self.failures.append(id)
 
     def handle_me_this(self, expr):
         '''
@@ -75,6 +80,7 @@ class drug_data:
         self.toensembl = toensembl
         self.holder = dict()
         self.start = 0
+        self.failures = []
 
     def get_targets(self, gene_order):
         '''
@@ -96,12 +102,14 @@ class drug_data:
                             targets = tHGNC.split(';')
                         else:
                             targets = [tHGNC]
-                        targets = [1 if self.convert_HGNC_to_ENSEMBL(g) in targets else 0 for g in gene_order]
+                        targets = [1 if g in [self.convert_HGNC_to_ENSEMBL(t) for t in targets] else 0 for g in gene_order]
+
                     self.holder[tHGNC] = targets
-                    assert np.sum(targets) > 0, 'target vector is all zeros'
+                assert np.sum(targets) > 0, 'target vector is all zeros'
 
                 yield (targets, id, id_type, response_type, response)
             except AssertionError:
+                self.failures.append(id)
                 pass
 
     def convert_HGNC_to_ENSEMBL(self, gene):
@@ -194,14 +202,15 @@ if __name__ == '__main__':
     try:
         ii = 0
         for targets, id, id_type, response_type, response in drug.get_targets(order):
-            print(f'working ... count={ii}', end='\r')
+            print(f'working ... count={ii} [failed={len(drug.failures) + len(expr.failures)}]\t', end='\r')
             obs = np.zeros(obs_size)
             obs[:,0] = expr.get_expr(id=id, source=id_type, gene_order=order)
             obs[:,1] = targets
-            obs_name = namer.get_name(id, id_type, response_type, response)
-            pyt = torch.Tensor(obs)
-            torch.save(pyt, f'../data_pytorch/tensors/{obs_name}.pt')
-            ii += 1
+            if np.sum(obs[:,0]) > 0 and np.sum(obs[:,1]) > 0:
+                obs_name = namer.get_name(id, id_type, response_type, response)
+                pyt = torch.Tensor(obs)
+                torch.save(pyt, f'../data_pytorch/tensors/{obs_name}.pt')
+                ii += 1
             #if ii == 5: break
 
         label_dict = namer.get_label_dict()
@@ -215,4 +224,6 @@ if __name__ == '__main__':
         f.close()
         raise
 
-    #print(label_dict)
+    print()
+    print(f'expression op failures: {len(expr.failures)}')
+    print(f'target op failures: {len(drug.failures)}')
