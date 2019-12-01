@@ -27,31 +27,29 @@ RESP_TYPES = {x:i for i,x in enumerate(['RNAi_dependency',
                                         'beatAML_AUC'])}
 N_DATATYPES = len(RESP_TYPES)
 
-H1 = 1000
-H2 = 500
-H3 = 250
-DH = 100                # Dataset Specific Layer
+H1 = 3000
+H2 = 2000
+H3 = 500                # Layer 3 - Dataset Shared
+DH = 250                # Dataset Specific Layer
 
-DO = 0.1                # Dropout
+DO = 0.25                # Dropout
 NCONVS = 2
 PRINT_EVERY = 1
 NGENES = 523 #/ 523
-EPOCHS = 5
-LEARNING_WEIGHT = 1e-2
-WEIGHT_DECAY = 0.05
+EPOCHS = 10
+LEARNING_WEIGHT = 1e-1
+WEIGHT_DECAY = 0.01
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 REPRODUCIBLE = True
 SEED = 0
 
-
-
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 train_params = {'batch_size': 2048,
           'shuffle': True,
-          'num_workers': 3}
+          'num_workers': 6}
 
-test_params = {'batch_size': 512,
+test_params = {'batch_size': 2048,
           'shuffle': False,
-          'num_workers': 0}
+          'num_workers': 6}

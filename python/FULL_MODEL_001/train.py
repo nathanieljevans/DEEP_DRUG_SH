@@ -14,6 +14,7 @@ from torch.utils import data
 from matplotlib import pyplot as plt
 import pandas as pd
 import imageio
+import random
 
 # ---
 import utils
@@ -38,12 +39,18 @@ if __name__ == '__main__':
 
     utils.print_split_label_dict(label_dict)
 
-    train_labels, test_labels, _, _ = utils.aggregate_labels(label_dict)
+    train_y_params, train_labels, test_labels, _, _ = utils.aggregate_labels(label_dict)
+
+    #N = 100000
+    #train_labels = dict(random.sample(train_labels.items(), N))
+    #test_labels = dict(random.sample(test_labels.items(), N))
 
     train_gen = data.DataLoader(utils.DrugExpressionDataset(train_labels, return_response_type=True), **train_params)
     test_gen = data.DataLoader(utils.DrugExpressionDataset(test_labels, return_response_type=True), **test_params)
 
     net = Net.Net(train_gen, test_gen)
+
+    print('training model...')
     net.train_model()
 
 

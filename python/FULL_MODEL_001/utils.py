@@ -5,6 +5,8 @@ import os
 import pickle
 import numpy as np
 import torch
+import pandas as pd
+import imageio
 
 # plot and show learning process
 #from : https://medium.com/@benjamin.phillips22/simple-regression-with-neural-networks-in-pytorch-313f06910379
@@ -12,13 +14,14 @@ class Training_Progress_Plotter:
     def __init__(self, figsize = (12,10)):
         '''
         '''
-        self.axes, self.fig = plt.subplots(1,2, figsize = figsize)
+        self.fig, self.axes = plt.subplots(1,2, figsize = figsize)
         self.images = []
 
-    def update(tr_ys, tr_yhats, tst_ys, tst_yhats, epoch, tr_loss, tst_loss):
+    def update(self,tr_ys, tr_yhats, tst_ys, tst_yhats, epoch, tr_loss, tst_loss):
         '''
         Record the training progress at each epoch.
         '''
+
         self.axes[0].cla()
 
         ######### TRAIN #########
@@ -26,14 +29,14 @@ class Training_Progress_Plotter:
         tr_df.sort_values(by='y', inplace=True)
 
         self.axes[0].plot(tr_df.values[:,0], 'ro', label='true', alpha=0.5)
-        self.axes[0].plot(tr_df.values[:,1], 'bo', label='predicted', alpha=0.5)
+        self.axes[0].plot(tr_df.values[:,1], 'bo', label='predicted', alpha=0.05)
 
         self.axes[0].set_title('Regression Analysis [Training Set]', fontsize=15)
         self.axes[0].set_xlabel('Sorted observations', fontsize=24)
         self.axes[0].set_ylabel('AUC', fontsize=24)
 
         self.axes[0].text(100, 30, 'Epoch = %d' % epoch, fontdict={'size': 24, 'color':  'red'})
-        self.axes[0].text(100, 50, 'Loss = %.4f' % loss, fontdict={'size': 24, 'color':  'red'})
+        self.axes[0].text(100, 50, 'Loss = %.4f' % tr_loss, fontdict={'size': 24, 'color':  'red'})
 
         ######### TEST #########
 
@@ -42,27 +45,27 @@ class Training_Progress_Plotter:
         tst_df.sort_values(by='y', inplace=True)
 
         self.axes[1].plot(tst_df.values[:,0], 'ro', label='true', alpha=0.5)
-        self.axes[1].plot(tst_df.values[:,1], 'bo', label='predicted', alpha=0.5)
-        plt.legend()
+        self.axes[1].plot(tst_df.values[:,1], 'bo', label='predicted', alpha=0.05)
+        plt.legend(loc='upper right')
 
-        self.axes[1].set_title('Regression Analysis [Validation Set]', fontsize=15)
+        self.axes[1].set_title('Regression Analysis [Test Set]', fontsize=15)
         self.axes[1].set_xlabel('Sorted observations', fontsize=24)
         self.axes[1].set_ylabel('AUC', fontsize=24)
 
         self.axes[1].text(100, 30, 'Epoch = %d' % epoch, fontdict={'size': 24, 'color':  'red'})
-        self.axes[1].text(100, 50, 'Loss = %.4f' % loss, fontdict={'size': 24, 'color':  'red'})
+        self.axes[1].text(100, 50, 'Loss = %.4f' % tst_loss, fontdict={'size': 24, 'color':  'red'})
 
         # (https://ndres.me/post/matplotlib-animated-gifs-easily/)
-        fig.canvas.draw()       # draw the canvas, cache the renderer
-        image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
-        image = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        self.fig.canvas.draw()       # draw the canvas, cache the renderer
+        image = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype='uint8')
+        image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
 
         self.images.append(image)
 
     def save_gif(self, name, path):
         '''
         '''
-        imageio.mimsave(f'{name}_training.gif', self.images, fps=10)
+        imageio.mimsave(f'{name}_training.gif', self.images, fps=5)
 
 class saver_and_early_stopping:
     '''
@@ -130,8 +133,14 @@ class DrugExpressionDataset(Dataset):
         X = torch.load(f'{self.root}/{fid}.pt')
         _id, id_type, resp_type, response = self.labels[fid]
 
+        resp_selector = np.zeros(N_DATATYPES)
+        resp_selector[RESP_TYPES[resp_type]] = 1
+
+        #resp_type_mat = np.zeros(N_DATATYPES)
+        #resp_type_mat[RESP_TYPES[resp_type]] = response
+
         if self.ret_resp_type:
-            return X, response, resp_type
+            return X, response, resp_selector
         else:
             return X, response
 
@@ -142,11 +151,12 @@ def print_split_label_dict(label_dict):
     for resp_type in label_dict:
         for sset in label_dict[resp_type]:
             pp = resp_type + ' '*(20 - len(resp_type))
-            print(f'set sizes: {pp} \t-> {sset}  \t-> {len(label_dict[resp_type][sset])}')
+            print(f'set sizes: {pp} \t-> {sset}  \t\t-> {len(label_dict[resp_type][sset])}')
 
 def split_data():
     assert os.path.exists(LABEL_PATH), 'label dictionary path does not exist, have you run `pytorch_data_separation.py` locally?'
     assert sum((TRAIN_PROP, TEST_PROP, VAL_PROP)) == 1, 'split proportions do not sum to 1; update `config.py`'
+
     if (os.path.exists(SPLIT_LABEL_PATH) and not RESPLIT_DATA):
         print('Train, Test, Validation sets have already been split, exiting...')
         return None
@@ -157,6 +167,7 @@ def split_data():
     AML_HOLDOUTS = set()
     ii = 0
     for fid in label_dict:
+
         _id, id_type, resp_type, response = label_dict[fid]
         fid = str(fid)
 
@@ -197,11 +208,31 @@ def split_data():
 
 
 def aggregate_labels(label_dict):
+    '''
+    pool all the datasets into single label dictionary, and scale response (y)
+    '''
 
+    # get y scale params
+    scale_params = dict()
+    for dataset in label_dict:
+        ys = []
+        for fid in label_dict[dataset]['train']:
+            _id, id_type, resp_type, response = label_dict[dataset]['train'][fid]
+            ys.append(response)
+        scale_params[dataset] = {'mean':np.mean(ys), 'std':np.std(ys)}
+
+    # scale data
+    for dataset in label_dict:
+        for split in label_dict[dataset]:
+            for fid in label_dict[dataset][split]:
+                _id, id_type, resp_type, response = label_dict[dataset][split][fid]
+                response = (response - scale_params[resp_type]['mean']) / scale_params[resp_type]['std']
+                label_dict[dataset][split][fid] = (_id, id_type, resp_type, response)
+
+    # aggregate data
     train_labels = dict()
     test_labels = dict()
     val_labels = dict()
-
     for dataset in label_dict:
         for split in label_dict[dataset]:
             if split == 'train':
@@ -213,10 +244,18 @@ def aggregate_labels(label_dict):
 
     aml_holdout = label_dict['beatAML_AUC']['PAT_HOLDOUT']
 
+    print()
     print('aggregated labels:')
-    print(f'\ttrain set: \t {len(train_labels)}')
-    print(f'\ttest set: \t {len(test_labels)}')
-    print(f'\tval set: \t {len(val_labels)}')
-    print(f'\taml holdout set:\t {len(aml_holdout)}')
+    print(f'\ttrain set: \t\t {len(train_labels)}')
+    print(f'\ttest set: \t\t {len(test_labels)}')
+    print(f'\tval set: \t\t {len(val_labels)}')
+    print(f'\taml holdout set: \t {len(aml_holdout)}')
+    print()
+    print('scale params: ')
+    for dataset in scale_params:
+        print(f'\t{dataset}:')
+        print(f'\t\t mean: {scale_params[dataset]["mean"]:.3f}')
+        print(f'\t\t std: {scale_params[dataset]["std"]:.3f}')
+    print()
 
-    return train_labels, test_labels, val_labels, aml_holdout
+    return scale_params, train_labels, test_labels, val_labels, aml_holdout
