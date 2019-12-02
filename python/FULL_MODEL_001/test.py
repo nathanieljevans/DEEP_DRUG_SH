@@ -18,7 +18,7 @@ if __name__ == '__main__':
         label_dict = pickle.load(f)
 
     plt.gcf()
-    f, axes = plt.subplots(3,3,figsize=(12,15))
+    f, axes = plt.subplots(4,2,figsize=(15,12))
 
     for i,dataset in enumerate([dataset for dataset in params['RESP_TYPES']]):
         test = label_dict[dataset]['test']
@@ -31,19 +31,31 @@ if __name__ == '__main__':
             print(f'predicting {dataset} ...[{ii}/{len(gen.dataset)}]', end='\r')
             yhats += net.predict(X, resp_type, resp_selector).tolist()
             ys += y.tolist()
+            #if ii > 1000:
+            #    break
         print()
 
+        mse = np.mean((np.array(ys) - np.array(yhats))**2)
         df = pd.DataFrame({'y':ys, 'yhat':yhats})
         df.sort_values(by='y', inplace=True)
 
+        axes.flat[-1].text(0.1,i*0.125,f'{dataset} mse: {" "*(30-len(dataset))} {mse:.3f}',  fontdict={'size': 10, 'color':  'red'})
+        axes.flat[-1].tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+        axes.flat[-1].tick_params(axis='y', which='both', right=False, left=False, labelleft=False)
+        alpha_ = 284./len(ys)
+        print(alpha_)
+
+
         #axes.flat[i].plot(np.log10(((df['y']-df['yhat'])**2).values), 'g--', label='log10 Quadratic Error', alpha=0.2)
-        axes.flat[i].plot(df['y'].values, 'r.', label='true', alpha=0.5)
-        axes.flat[i].plot(df['yhat'].values, 'b.', label='predicted', alpha=0.05)
+        axes.flat[i].plot(df['yhat'].values, 'b.', label='predicted', alpha=alpha_)
+        axes.flat[i].plot(df['y'].values, 'r.', label='true', alpha=alpha_)
 
         axes.flat[i].set_title(f'Predictions: {dataset}', fontsize=10)
         axes.flat[i].set_xlabel('Sorted observations', fontsize=10)
         axes.flat[i].set_ylabel(f'Response', fontsize=10)
         axes.flat[i].legend()
 
-    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.25, hspace=0.35)
+    for pos in ['right','top','bottom','left']:
+        axes.flat[-1].spines[pos].set_visible(False)
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.15, hspace=0.45)
     plt.savefig(f"{params['MODEL_OUT_DIR']}/{params['NAME']}/test_predictions_plot.png")

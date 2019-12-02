@@ -39,20 +39,32 @@ if __name__ == '__main__':
     df = pd.DataFrame(targets)
     df = df.groupby(['dataset', 'target']).agg({'response':'mean'})
     df = df.reset_index()
-    print(df.head())
 
+    f, axes = plt.subplots(5,3,figsize=(15,10))
     corr = {'dataset1':[],'dataset2':[],'corr':[]}
+    ii = 0
     for i, dataset1 in enumerate([dataset for dataset in params['RESP_TYPES']]):
         for j,dataset2 in enumerate([dataset for dataset in params['RESP_TYPES']][(i+1):]):
             tmp = df[df['dataset'].isin([dataset1, dataset2])]
             intersection_targets = np.intersect1d(tmp[tmp['dataset'] == dataset1].target.values, tmp[tmp['dataset'] == dataset2].target.values)
             tmp = tmp[tmp['target'].isin(intersection_targets)].pivot(index='target', columns='dataset', values='response')
             print(f'[{dataset1}, {dataset2}] intersecting targets: {tmp.values.shape[0]}')
-            if tmp.values.shape[0] > 0
+            if tmp.values.shape[0] > 10:
                 corr['dataset1'].append(dataset1)
                 corr['dataset2'].append(dataset2)
-                corr['corr'].append(np.correlate(tmp.values[:,0], tmp.values[:,1]))
+                cor = np.correlate(tmp.values[:,0], tmp.values[:,1])
+                corr['corr'].append(cor)
 
+                axes.flat[ii].plot(tmp.values[:,0], tmp.values[:,1], 'r.', alpha=0.1)
+
+                axes.flat[ii].set_title(f'{dataset1}-{dataset2} [{cor[0]:.2f}]', fontsize=10)
+                axes.flat[ii].set_xlabel('response1', fontsize=10)
+                axes.flat[ii].set_ylabel(f'response2', fontsize=10)
+
+                ii+=1
+
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.25, hspace=0.75)
+    plt.savefig('./dataset_response_comparison_plot.png')
     print(corr)
 
 
