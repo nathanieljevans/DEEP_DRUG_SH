@@ -23,35 +23,38 @@ import Net
 # ---
 
 '''
-Global constants are stored in `config.py`
+Global constants are stored in `config.py` in a dict named `params`
 '''
 
 if __name__ == '__main__':
 
-    if REPRODUCIBLE:
-        torch.manual_seed(SEED)
-        np.random.seed(SEED)
+    if params['REPRODUCIBLE']:
+        torch.manual_seed(params['SEED'])
+        np.random.seed(params['SEED'])
 
     utils.split_data()
 
-    with open(SPLIT_LABEL_PATH, 'rb') as f:
+    with open(params['SPLIT_LABEL_PATH'], 'rb') as f:
         label_dict = pickle.load(f)
 
     utils.print_split_label_dict(label_dict)
 
     train_y_params, train_labels, test_labels, _, _ = utils.aggregate_labels(label_dict)
 
-    #N = 100000
+    #N = 10000
     #train_labels = dict(random.sample(train_labels.items(), N))
     #test_labels = dict(random.sample(test_labels.items(), N))
 
-    train_gen = data.DataLoader(utils.DrugExpressionDataset(train_labels, return_response_type=True), **train_params)
-    test_gen = data.DataLoader(utils.DrugExpressionDataset(test_labels, return_response_type=True), **test_params)
+    train_gen = data.DataLoader(utils.DrugExpressionDataset(train_labels, root_dir=params['DATA_DIR'], return_response_type=True), **params['train_params'])
+    test_gen = data.DataLoader(utils.DrugExpressionDataset(test_labels, root_dir=params['DATA_DIR'], return_response_type=True), **params['test_params'])
 
-    net = Net.Net(train_gen, test_gen)
+    net = Net.Net(train_gen, test_gen, params, train_y_params)
 
     print('training model...')
     net.train_model()
+
+    print('saving model...')
+    net.save_model()
 
 
 

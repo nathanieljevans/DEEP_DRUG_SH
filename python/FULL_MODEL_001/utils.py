@@ -52,8 +52,8 @@ class Training_Progress_Plotter:
         self.axes[1].set_xlabel('Sorted observations', fontsize=24)
         self.axes[1].set_ylabel('AUC', fontsize=24)
 
-        self.axes[1].text(100, 30, 'Epoch = %d' % epoch, fontdict={'size': 24, 'color':  'red'})
-        self.axes[1].text(100, 50, 'Loss = %.4f' % tst_loss, fontdict={'size': 24, 'color':  'red'})
+        self.axes[1].text(1, 1, 'Epoch = %d' % epoch, fontdict={'size': 24, 'color':  'red'})
+        self.axes[1].text(1, 2, 'Loss = %.4f' % tst_loss, fontdict={'size': 24, 'color':  'red'})
 
         # (https://ndres.me/post/matplotlib-animated-gifs-easily/)
         self.fig.canvas.draw()       # draw the canvas, cache the renderer
@@ -61,11 +61,13 @@ class Training_Progress_Plotter:
         image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
 
         self.images.append(image)
+        self.axes[0].cla()
+        self.axes[0].cla()
 
-    def save_gif(self, name, path):
+    def save_gif(self, path):
         '''
         '''
-        imageio.mimsave(f'{name}_training.gif', self.images, fps=5)
+        imageio.mimsave(path, self.images, fps=5)
 
 class saver_and_early_stopping:
     '''
@@ -113,7 +115,7 @@ class saver_and_early_stopping:
 class DrugExpressionDataset(Dataset):
     '''
     '''
-    def __init__ (self, label_dict, root_dir=DATA_DIR, return_response_type=False):
+    def __init__ (self, label_dict, root_dir, return_response_type=False):
         '''
         '''
         self.index = list(label_dict.keys())
@@ -133,14 +135,11 @@ class DrugExpressionDataset(Dataset):
         X = torch.load(f'{self.root}/{fid}.pt')
         _id, id_type, resp_type, response = self.labels[fid]
 
-        resp_selector = np.zeros(N_DATATYPES)
-        resp_selector[RESP_TYPES[resp_type]] = 1
-
-        #resp_type_mat = np.zeros(N_DATATYPES)
-        #resp_type_mat[RESP_TYPES[resp_type]] = response
+        resp_selector = np.zeros(params['N_DATATYPES'])
+        resp_selector[params['RESP_TYPES'][resp_type]] = 1
 
         if self.ret_resp_type:
-            return X, response, resp_selector
+            return X, response, resp_type, resp_selector
         else:
             return X, response
 
@@ -151,17 +150,17 @@ def print_split_label_dict(label_dict):
     for resp_type in label_dict:
         for sset in label_dict[resp_type]:
             pp = resp_type + ' '*(20 - len(resp_type))
-            print(f'set sizes: {pp} \t-> {sset}  \t\t-> {len(label_dict[resp_type][sset])}')
+            print(f'set sizes: {pp} \t-> {sset}    \t-> {len(label_dict[resp_type][sset])}')
 
 def split_data():
-    assert os.path.exists(LABEL_PATH), 'label dictionary path does not exist, have you run `pytorch_data_separation.py` locally?'
-    assert sum((TRAIN_PROP, TEST_PROP, VAL_PROP)) == 1, 'split proportions do not sum to 1; update `config.py`'
+    assert os.path.exists(params['LABEL_PATH']), 'label dictionary path does not exist, have you run `pytorch_data_separation.py` locally?'
+    assert sum((params['TRAIN_PROP'], params['TEST_PROP'], params['VAL_PROP'])) == 1, 'split proportions do not sum to 1; update `config.py`'
 
-    if (os.path.exists(SPLIT_LABEL_PATH) and not RESPLIT_DATA):
+    if (os.path.exists(params['SPLIT_LABEL_PATH']) and not params['RESPLIT_DATA']):
         print('Train, Test, Validation sets have already been split, exiting...')
         return None
 
-    with open(LABEL_PATH, 'rb') as f: label_dict = pickle.load(f)
+    with open(params['LABEL_PATH'], 'rb') as f: label_dict = pickle.load(f)
 
     label_dict2 = dict()
     AML_HOLDOUTS = set()
@@ -175,7 +174,7 @@ def split_data():
             label_dict2[resp_type] = dict()
 
         p = np.random.rand()
-        if (resp_type == 'beatAML_AUC' and ii < N_BEATAML_PATIENTS_EXCLUSIVE_TO_TEST) or (_id in AML_HOLDOUTS):
+        if (resp_type == 'beatAML_AUC' and ii < params['N_BEATAML_PATIENTS_EXCLUSIVE_TO_TEST']) or (_id in AML_HOLDOUTS):
             if ii == 0:
                 label_dict2[resp_type]['PAT_HOLDOUT'] = {fid : (_id, id_type, resp_type, response)}
             else:
@@ -184,13 +183,13 @@ def split_data():
             AML_HOLDOUTS.add(_id)
             ii += 1
 
-        if (p < TRAIN_PROP): # add to training set
+        if (p < params['TRAIN_PROP']): # add to training set
             if 'train' in label_dict2[resp_type]:
                 label_dict2[resp_type]['train'][fid] = (_id, id_type, resp_type, response)
             else:
                 label_dict2[resp_type]['train'] = {fid:(_id, id_type, resp_type, response)}
 
-        elif (p < TRAIN_PROP + TEST_PROP): # add to test set
+        elif (p < params['TRAIN_PROP'] + params['TEST_PROP']): # add to test set
             if 'test' in label_dict2[resp_type]:
                 label_dict2[resp_type]['test'][fid] = (_id, id_type, resp_type, response)
             else:
@@ -203,7 +202,7 @@ def split_data():
 
     print_split_label_dict(label_dict2)
 
-    with open(SPLIT_LABEL_PATH, 'wb') as f:
+    with open(params['SPLIT_LABEL_PATH'], 'wb') as f:
         pickle.dump(label_dict2, f)
 
 
