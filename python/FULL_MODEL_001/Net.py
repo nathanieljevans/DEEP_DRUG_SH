@@ -75,7 +75,7 @@ class Net(torch.nn.Module):
         a4 = self.AE_do(F.relu(self.AE_fc4(a3)))
         a5 = self.AE_do(F.relu(self.AE_fc5(a4)))
         a6 = self.AE_do(F.relu(self.AE_fc6(a5)))
-        a6 = a0.reshape(a6.size(0), self.params['NGENES'], 2)
+        a6 = a6.reshape(a6.size(0), self.params['NGENES'], 2)
         return a6
 
     def pretrain_model(self):
@@ -114,7 +114,7 @@ class Net(torch.nn.Module):
         plt.plot((self.params['train_params']['batch_size']/len(self.test_gen.dataset))*np.arange(len(mse)), mse, 'r-')
         plt.xlabel('epoch')
         plt.ylabel('loss')
-        plt.title('Pretraining Loss')
+        plt.title(name)
         plt.savefig(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/{name}.png")
         plt.close('all')
 

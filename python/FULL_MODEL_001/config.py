@@ -33,7 +33,7 @@ params = {
 'N_DATATYPES' : 7,
 
 'H1' : 2000,
-'H2' : 1000,
+'H2' : 2000,
 'H3' : 100,                # Layer 3 - Dataset Shared
 'DH' : 500,                # Dataset Specific Layer
 
@@ -47,7 +47,7 @@ params = {
 'LR_DECAY_PATIENCE' : 50,       # batches (not epochs)
 'PRETRAIN_EPOCHS' : 1,
 'PRETRAIN_LR' : 1e-1,
-'PRETRAIN_WD' : 0.01,
+'PRETRAIN_WD' : 0.1,
 'PRETRAIN_DO' : 0.9,
 'PRETRAIN_MSE_WEIGHT' : 10,     # Weight applied to target MSE
 # -----------------------------------------------------------------------------
