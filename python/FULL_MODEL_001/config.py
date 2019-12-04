@@ -32,10 +32,10 @@ params = {
                                         'beatAML_AUC'])},
 'N_DATATYPES' : 7,
 
-'H1' : 2000,
-'H2' : 2000,
-'H3' : 500,                # Layer 3 - Dataset Shared
-'DH' : 500,                # Dataset Specific Layer
+'H1' : 1000,
+'H2' : 500,
+'H3' : 100,                # Layer 3 - Dataset Shared
+'DH' : 100,                # Dataset Specific Layer
 
 'DO' : 0.,                # Dropout
 'NCONVS' : 2,
@@ -45,6 +45,11 @@ params = {
 'LEARNING_WEIGHT' : 5e-2,
 'WEIGHT_DECAY' : 0.001,
 'LR_DECAY_PATIENCE' : 3,
+'PRETRAIN_EPOCHS' : 3,
+'PRETRAIN_LR' : 1,
+'PRETRAIN_WD' : 0.01,
+'PRETRAIN_DO' : 0.1,
+'PRETRAIN_MSE_WEIGHT' : 1000,     # Weight applied to target MSE
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 'REPRODUCIBLE' : True,
@@ -52,7 +57,7 @@ params = {
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-'train_params' : {'batch_size': 2048,
+'train_params' : {'batch_size': 4*2048,
           'shuffle': True,
           'num_workers': 6},
 

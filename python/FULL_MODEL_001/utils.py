@@ -8,6 +8,19 @@ import torch
 import pandas as pd
 import imageio
 
+
+def AE_LOSS(output, target, gamma):
+    '''
+    Encoding our targets properly is very important; this custom loss function
+    provides higher penalty to mis-encoding targets than expression data.
+
+    We will use sum of squared errors, this way SSE = 0 is a lossless encoding.
+    '''
+    loss_expr = torch.sum((output[:,:,0] - target[:,:,0])**2)
+    loss_targ = torch.sum((output[:,:,1] - target[:,:,1])**2)
+    return loss_expr + gamma * loss_targ
+
+
 # plot and show learning process
 #from : https://medium.com/@benjamin.phillips22/simple-regression-with-neural-networks-in-pytorch-313f06910379
 class Training_Progress_Plotter:

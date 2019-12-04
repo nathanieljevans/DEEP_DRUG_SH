@@ -50,6 +50,9 @@ if __name__ == '__main__':
 
     net = Net.Net(train_gen, test_gen, params, train_y_params)
 
+    print('pretraining model...')
+    net.pretrain_model()
+
     print('training model...')
     net.train_model()
 

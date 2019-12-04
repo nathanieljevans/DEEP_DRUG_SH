@@ -35,6 +35,11 @@ class Net(torch.nn.Module):
         self.DSP = [torch.nn.Linear(self.params['H3'], self.params['DH']) for _ in range(self.params['N_DATATYPES'])]
         self.out = [torch.nn.Linear(self.params['DH'], 1) for _ in range(self.params['N_DATATYPES'])]
 
+        self.AE_do = torch.nn.Dropout(self.params['PRETRAIN_DO'])
+        self.AE_fc4 = torch.nn.Linear(self.params['H3'], self.params['H2'])
+        self.AE_fc5 = torch.nn.Linear(self.params['H2'], self.params['H1'])
+        self.AE_fc6 = torch.nn.Linear(self.params['H1'], 2*self.params['NGENES'])
+
         if not os.path.exists(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}"):
             os.mkdir(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}")
 
@@ -58,6 +63,58 @@ class Net(torch.nn.Module):
 
         return endout
 
+    def pretrain_forward(self, x):
+        x = x.unsqueeze(1)
+        #x = self.do(x)
+        ################################ ENCODE ################################
+        a0 = F.relu(self.layer1(x))
+        a0 = a0.reshape(a0.size(0), -1)                         # Conv2D
+        a1 = self.AE_do(self.bn1(F.relu(self.fc1(a0))))                     # FC layer 1
+        a2 = self.AE_do(self.bn2(F.relu(self.fc2(a1))))                     # FC layer 2
+        a3 = self.AE_do(self.bn3(F.relu(self.fc3(a2))))                     # FC layer 3
+        ################################ DECODE ################################
+        a4 = self.AE_do(F.relu(self.AE_fc4(a3)))
+        a5 = self.AE_do(F.relu(self.AE_fc5(a4)))
+        a6 = self.AE_do(F.relu(self.AE_fc6(a5)))
+        a6 = a0.reshape(a6.size(0), self.params['NGENES'], 2)
+        return a6
+
+    def pretrain_model(self):
+        '''
+        '''
+        use_cuda = torch.cuda.is_available()
+        device = torch.device("cuda:0" if use_cuda else "cpu")
+        optim = torch.optim.Adam(self.parameters(recurse=True), lr=self.params['PRETRAIN_LR'], weight_decay=self.params['PRETRAIN_WD'])
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min',
+                                                            factor=0.1, patience=25,
+                                                            verbose=True, threshold=10,
+                                                            threshold_mode='rel', cooldown=0,
+                                                            min_lr=1e-5, eps=1e-08)
+        for epoch in range(self.params['PRETRAIN_EPOCHS']):
+            total_loss = 0
+            mse = []
+            self.train()
+            ii = 0
+            for X,y,_,resp_selector in self.train_gen:
+                ii += X.size(0)
+                X = X.to(device, dtype=torch.float)
+                xhat = self.pretrain_forward(X)
+                loss = utils.AE_LOSS(xhat, X, gamma=self.params['PRETRAIN_MSE_WEIGHT'])
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
+                total_loss += loss.detach().numpy()
+                print(f'EPOCH: {epoch} [training set] \t mse: [{(total_loss/ii):.4f}]  \t |  Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\r')
+                scheduler.step(total_loss)
+                mse.append((total_loss/ii))
+                self.plot_mse(mse, 'pretraining_mse')
+            print()
+
+    def plot_mse(self, mse, name):
+        plt.figure()
+        plt.plot(mse, 'r-')
+        plt.savefig(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/{name}.png")
+        plt.close('all')
 
     def train_model(self):
 

@@ -14,6 +14,28 @@ from config import *    # params stored here
 import utils
 import pandas as pd
 from torch.utils import  data
+import statsmodels.api as sm
+from scipy.stats import zscore
+
+def mean_na_remove(x):
+    x = x[~np.isnan(x)]
+    return np.mean(x)
+
+def lm(x1, x2):
+    try:
+        x = np.linspace(min(x1),max(x1),10)
+        x1 = sm.add_constant(x1)
+        model = sm.OLS(x2, x1)
+        results = model.fit()
+
+        y = results.predict(sm.add_constant(x))
+
+        p = results.f_test(np.identity(2)).pvalue
+
+        return p, x, y, results.params[1]
+    except:
+        raise
+        return -1, [0], [0]
 
 if __name__ == '__main__':
 
@@ -27,55 +49,59 @@ if __name__ == '__main__':
         ii = 0
         for X,y,resp_type,resp_selector in gen:
             ii+=X.size(0)
-            if ii > 1000:
-                break
+            #if ii > 1000:
+            #    break
             if ii/X.size(0) % 1000 == 0:
                 print(f'predicting {dataset} ...[{ii}/{len(gen.dataset)}]', end='\r')
             targets['dataset'].append(dataset)
             targets['target'].append(hash(str(X.numpy()[:,1])))
             targets['response'].append(y.numpy()[0])
-            targets['expr'].append(hash(str(np.round(X.numpy()[:,0]))))
-
+            targets['expr'].append(hash(str(np.round(X.numpy()[:,0], decimals=0))))
         print()
 
     df = pd.DataFrame(targets)
-    df = df.groupby(['dataset', 'target', 'expr']).agg({'response':'mean'})
+    df = df.groupby(['dataset', 'target', 'expr']).agg({'response':mean_na_remove})
     df = df.reset_index()
 
     print(df.head())
 
-    f, axes = plt.subplots(5,3,figsize=(15,10))
+    f, axes = plt.subplots(5,3,figsize=(15,12))
     corr = {'dataset1':[],'dataset2':[],'corr':[]}
     ii = 0
     for i, dataset1 in enumerate([dataset for dataset in params['RESP_TYPES']]):
         for j,dataset2 in enumerate([dataset for dataset in params['RESP_TYPES']][(i+1):]):
-            print(f'{dataset1} | {dataset2}')
-            tmp = df[df['dataset'].isin([dataset1, dataset2])]
-            intersection_targets = np.intersect1d(tmp[tmp['dataset'] == dataset1].target.values, tmp[tmp['dataset'] == dataset2].target.values)
-            intersection_expr = np.intersect1d(tmp[tmp['dataset'] == dataset1].expr.values, tmp[tmp['dataset'] == dataset2].expr.values)
-            print(intersection_expr)
-            tmp = tmp[tmp['target'].isin(intersection_targets)]
-            print(tmp.head())
-            tmp = tmp[tmp['expr'].isin(intersection_expr)]
-            print(tmp.head())
-            tmp = tmp.pivot(index=['target','expr'], columns='dataset', values='response')
-            print(f'[{dataset1}, {dataset2}] intersecting targets: {tmp.values.shape[0]}')
-            if tmp.values.shape[0] > 10:
-                corr['dataset1'].append(dataset1)
-                corr['dataset2'].append(dataset2)
-                cor = np.correlate(tmp.values[:,0], tmp.values[:,1])
-                corr['corr'].append(cor)
+            try:
+                tmp = df[df['dataset'].isin([dataset1, dataset2])]
+                intersection_targets = np.intersect1d(tmp[tmp['dataset'] == dataset1].target.values, tmp[tmp['dataset'] == dataset2].target.values)
+                intersection_expr = np.intersect1d(tmp[tmp['dataset'] == dataset1].expr.values, tmp[tmp['dataset'] == dataset2].expr.values)
+                tmp = tmp[tmp['target'].isin(intersection_targets)]
+                tmp = tmp[tmp['expr'].isin(intersection_expr)]
+                tmp = tmp.pivot_table(index=['target','expr'], columns='dataset', values='response', aggfunc=mean_na_remove)
+                tmp = tmp.dropna()
+                print(f'[{dataset1}, {dataset2}] intersecting targets: {tmp.values.shape[0]}')
+                if tmp.values.shape[0] > 10:
+                    X1 = zscore(tmp.values[:,0])
+                    X2 = zscore(tmp.values[:,1])
+                    p, xx, yy, B = lm(X1, X2)
+                    corr['dataset1'].append(dataset1)
+                    corr['dataset2'].append(dataset2)
+                    cor = np.correlate(X1, X2)
+                    corr['corr'].append(cor)
 
-                axes.flat[ii].plot(tmp.values[:,0], tmp.values[:,1], 'r.', alpha=0.1)
+                    axes.flat[ii].plot(X1, X2, 'r.', alpha=0.2)
+                    axes.flat[ii].plot(xx, yy, 'b--', label=f'pval: {p:.2g} \nslope: {B:.2f}')
+                    axes.flat[ii].legend()
+                    axes.flat[ii].set_title(f'{dataset1}-{dataset2} [cor: {cor[0]:.2f}]', fontsize=10)
+                    axes.flat[ii].set_xlabel('response1', fontsize=10)
+                    axes.flat[ii].set_ylabel(f'response2', fontsize=10)
 
-                axes.flat[ii].set_title(f'{dataset1}-{dataset2} [{cor[0]:.2f}]', fontsize=10)
-                axes.flat[ii].set_xlabel('response1', fontsize=10)
-                axes.flat[ii].set_ylabel(f'response2', fontsize=10)
-
-                ii+=1
+                    ii+=1
+            except:
+                print(f'Failed: {dataset1} - {dataset2}')
+                raise
 
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.25, hspace=0.75)
-    plt.savefig('./dataset_response_comparison_plot.png')
+    plt.savefig('../Dataset_Comparison/dataset_response_comparison_plot.png')
     print(corr)
 
 
