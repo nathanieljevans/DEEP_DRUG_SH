@@ -43,8 +43,6 @@ if __name__ == '__main__':
         axes.flat[-1].tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
         axes.flat[-1].tick_params(axis='y', which='both', right=False, left=False, labelleft=False)
         alpha_ = 284./len(ys)
-        print(alpha_)
-
 
         #axes.flat[i].plot(np.log10(((df['y']-df['yhat'])**2).values), 'g--', label='log10 Quadratic Error', alpha=0.2)
         axes.flat[i].plot(df['yhat'].values, 'b.', label='predicted', alpha=alpha_)

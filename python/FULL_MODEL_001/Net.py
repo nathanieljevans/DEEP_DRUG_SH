@@ -45,16 +45,15 @@ class Net(torch.nn.Module):
 
     def forward(self, x):
         x = x.unsqueeze(1)
-        x = self.do(x)
 
         a0 = F.relu(self.layer1(x))
         a0 = a0.reshape(a0.size(0), -1)    # Conv2D
 
-        a1 = self.bn1(F.relu(self.fc1(a0)))                    # FC layer 1
+        a1 = self.do(self.bn1(F.relu(self.fc1(a0))))                    # FC layer 1
 
-        a2 = self.bn2(F.relu(self.fc2(a1)))                     # FC layer 2
+        a2 = self.do(self.bn2(F.relu(self.fc2(a1))))                     # FC layer 2
 
-        a3 = self.bn3(F.relu(self.fc3(a2)))                     # FC layer 3
+        a3 = self.do(self.bn3(F.relu(self.fc3(a2))))                     # FC layer 3
 
         aDS = [F.relu(FC(a3)) for FC in self.DSP]
         o = [out(a4) for a4, out in zip(aDS, self.out)]
@@ -90,9 +89,9 @@ class Net(torch.nn.Module):
                                                             verbose=True, threshold=10,
                                                             threshold_mode='rel', cooldown=0,
                                                             min_lr=1e-5, eps=1e-08)
+        mse = []
         for epoch in range(self.params['PRETRAIN_EPOCHS']):
             total_loss = 0
-            mse = []
             self.train()
             ii = 0
             for X,y,_,resp_selector in self.train_gen:
@@ -112,7 +111,10 @@ class Net(torch.nn.Module):
 
     def plot_mse(self, mse, name):
         plt.figure()
-        plt.plot(mse, 'r-')
+        plt.plot((self.params['train_params']['batch_size']/len(self.test_gen.dataset))*np.arange(len(mse)), mse, 'r-')
+        plt.xlabel('epoch')
+        plt.ylabel('loss')
+        plt.title('Pretraining Loss')
         plt.savefig(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/{name}.png")
         plt.close('all')
 
@@ -125,15 +127,15 @@ class Net(torch.nn.Module):
         loss_func = torch.nn.MSELoss(reduction='sum')
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, mode='min',
                                                             factor=0.1, patience=self.params['LR_DECAY_PATIENCE'],
-                                                            verbose=True, threshold=1000,
+                                                            verbose=False, threshold=100,
                                                             threshold_mode='rel', cooldown=0,
                                                             min_lr=1e-5, eps=1e-08)
 
         self.recorder={'train':{'total_loss':[], 'mse':[], 'batch-mse':[]}, 'test':{'mse':[], 'batch-mse':[]}}
         MAX_EPOCH = self.params['EPOCHS']
+        tr_mse = []
         for epoch in range(MAX_EPOCH):
             total_loss = 0
-            mse = 0
             yhats=[]
             ys=[]
             self.train()
@@ -149,13 +151,14 @@ class Net(torch.nn.Module):
                 optim.zero_grad()
                 loss.backward()
                 optim.step()
+                scheduler.step(total_loss)
                 total_loss += loss.detach().numpy()
                 yhats += yhat.data.numpy()[resp_selector==1].ravel().tolist()
                 ys += y.data.numpy().ravel().tolist()
                 self.recorder['train']['batch-mse'].append(loss.detach().numpy()/X.size(0))
-                print(f'Train set... \t mse: [{loss.detach().numpy()/(X.size(0)):.4f}]  \t |  Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\r')
-
-            scheduler.step(total_loss)
+                tr_mse.append(total_loss/ii)
+                self.plot_mse(tr_mse, 'training_sse')
+                print(f'Train set... mse: [{loss.detach().numpy()/(X.size(0)):.4f}] | Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\r')
 
 
             self.recorder['train']['total_loss'].append(total_loss)
@@ -178,18 +181,18 @@ class Net(torch.nn.Module):
                 test_yhats += yhat.data.numpy()[resp_selector==1].ravel().tolist()
                 test_ys += y.data.numpy().ravel().tolist()
                 self.recorder['test']['batch-mse'].append(loss/X.size(0))
-                print(f'Test set... \t mse: [{loss/(X.size(0)):.4f}]   \t |  Epoch progress: [{jj}/{len(self.test_gen.dataset)}] {"."*int(jj/(len(self.test_gen.dataset)/10))}', end = '\t\t\t\r')
+                print(f'Test set... mse: [{loss/(X.size(0)):.4f}] | Epoch progress: [{jj}/{len(self.test_gen.dataset)}] {"."*int(jj/(len(self.test_gen.dataset)/10))}', end = '\t\t\t\r')
 
             self.recorder['test']['mse'].append(test_total_loss/len(self.test_gen.dataset))
 
-            self.plotter.update(tr_ys=ys[:10000], tr_yhats=yhats[:10000],
-                                tst_ys=test_ys[:10000], tst_yhats=test_yhats[:10000],
+            self.plotter.update(tr_ys=ys, tr_yhats=yhats,
+                                tst_ys=test_ys, tst_yhats=test_yhats,
                                 epoch=epoch, tr_loss=self.recorder['train']['mse'][-1],
                                 tst_loss=self.recorder['test']['mse'][-1])
 
             if (epoch % self.params['PRINT_EVERY']) == 0:
                 print()
-                print(f'\t epoch {epoch+1}/{MAX_EPOCH} \t\t\t | \t train total loss: {total_loss:.2f} | train mse: {total_loss/len(self.train_gen.dataset):.6f} || test total_loss: {test_total_loss:.2f} | test mse: {test_total_loss / len(self.test_gen.dataset):.4f}\t\t\t')
+                print(f'>>> END EPOCH {epoch+1}/{MAX_EPOCH} || train total loss: {total_loss:.2f} | train mse: {total_loss/len(self.train_gen.dataset):.6f} || test total_loss: {test_total_loss:.4g} | test mse: {test_total_loss / len(self.test_gen.dataset):.4g} \t\t\t')
         print()
         print('training complete...')
         self.plotter.save_gif(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/training_fit.gif")
@@ -198,17 +201,17 @@ class Net(torch.nn.Module):
     def plot_training_loss(self):
 
         plt.figure(figsize=(12,8))
-        plt.plot(self.recorder['test']['mse'], 'r-', label='test mse')
-        plt.plot(np.linspace(0, len(self.recorder['test']['mse'])-1, len(self.recorder['test']['batch-mse'])),
-                    self.recorder['test']['batch-mse'],
-                    'r--', label='test batch-mse', alpha=0.75)
-        plt.plot(self.recorder['train']['mse'], 'b-', label='train mse')
         plt.plot(np.linspace(0, len(self.recorder['train']['mse'])-1, len(self.recorder['train']['batch-mse'])),
                     self.recorder['train']['batch-mse'],
-                    'b--', label='train batch-mse', alpha=0.75)
+                    'b--', label='train batch-mse', alpha=0.2)
+        plt.plot(self.recorder['test']['mse'], 'r-', label='test mse')
+        #plt.plot(np.linspace(0, len(self.recorder['test']['mse'])-1, len(self.recorder['test']['batch-mse'])),
+        #            self.recorder['test']['batch-mse'],
+        #            'r--', label='test batch-mse', alpha=0.75)
+        plt.plot(self.recorder['train']['mse'], 'b-', label='train mse')
 
         plt.xlabel('epochs')
-        plt.ylabel('log10(Mean Square Error)')
+        plt.ylabel('Sum of Square Errors')
         plt.title('Training Loss')
         plt.legend()
         plt.savefig(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/training_loss_plot.png")

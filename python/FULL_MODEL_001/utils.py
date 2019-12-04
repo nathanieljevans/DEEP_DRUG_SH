@@ -8,7 +8,6 @@ import torch
 import pandas as pd
 import imageio
 
-
 def AE_LOSS(output, target, gamma):
     '''
     Encoding our targets properly is very important; this custom loss function
@@ -24,11 +23,12 @@ def AE_LOSS(output, target, gamma):
 # plot and show learning process
 #from : https://medium.com/@benjamin.phillips22/simple-regression-with-neural-networks-in-pytorch-313f06910379
 class Training_Progress_Plotter:
-    def __init__(self, figsize = (12,10)):
+    def __init__(self, figsize = (12,10), ylim = (-2.5,2.5)):
         '''
         '''
         self.fig, self.axes = plt.subplots(1,2, figsize = figsize)
         self.images = []
+        self.ylim = ylim
 
     def update(self,tr_ys, tr_yhats, tst_ys, tst_yhats, epoch, tr_loss, tst_loss):
         '''
@@ -38,11 +38,13 @@ class Training_Progress_Plotter:
         self.axes[0].cla()
 
         ######### TRAIN #########
+        alpha_ = 100/len(tr_ys)
+
         tr_df = pd.DataFrame({'y':tr_ys, 'yhat':tr_yhats})
         tr_df.sort_values(by='y', inplace=True)
 
-        self.axes[0].plot(tr_df.values[:,0], 'ro', label='true', alpha=0.5)
-        self.axes[0].plot(tr_df.values[:,1], 'bo', label='predicted', alpha=0.05)
+        self.axes[0].plot(tr_df.values[:,0], 'ro', label='true', alpha=alpha_)
+        self.axes[0].plot(tr_df.values[:,1], 'bo', label='predicted', alpha=0.1*alpha_)
 
         self.axes[0].set_title('Regression Analysis [Training Set]', fontsize=15)
         self.axes[0].set_xlabel('Sorted observations', fontsize=24)
@@ -51,14 +53,17 @@ class Training_Progress_Plotter:
         self.axes[0].text(100, 30, 'Epoch = %d' % epoch, fontdict={'size': 24, 'color':  'red'})
         self.axes[0].text(100, 50, 'Loss = %.4f' % tr_loss, fontdict={'size': 24, 'color':  'red'})
 
+        self.axes[0].set_ylim(bottom=self.ylim[0], top=self.ylim[1])
+
         ######### TEST #########
+        alpha_ = 100/len(tst_ys)
 
         self.axes[1].cla()
         tst_df = pd.DataFrame({'y':tst_ys, 'yhat':tst_yhats})
         tst_df.sort_values(by='y', inplace=True)
 
-        self.axes[1].plot(tst_df.values[:,0], 'ro', label='true', alpha=0.5)
-        self.axes[1].plot(tst_df.values[:,1], 'bo', label='predicted', alpha=0.05)
+        self.axes[1].plot(tst_df.values[:,0], 'ro', label='true', alpha=alpha_)
+        self.axes[1].plot(tst_df.values[:,1], 'bo', label='predicted', alpha=0.1*alpha_)
         plt.legend(loc='upper right')
 
         self.axes[1].set_title('Regression Analysis [Test Set]', fontsize=15)
@@ -67,6 +72,8 @@ class Training_Progress_Plotter:
 
         self.axes[1].text(1, 1, 'Epoch = %d' % epoch, fontdict={'size': 24, 'color':  'red'})
         self.axes[1].text(1, 2, 'Loss = %.4f' % tst_loss, fontdict={'size': 24, 'color':  'red'})
+
+        self.axes[1].set_ylim(bottom=self.ylim[0], top=self.ylim[1])
 
         # (https://ndres.me/post/matplotlib-animated-gifs-easily/)
         self.fig.canvas.draw()       # draw the canvas, cache the renderer
