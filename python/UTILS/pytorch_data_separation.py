@@ -184,19 +184,19 @@ if __name__ == '__main__':
     # check for label_dict and load in
     LOAD_DICT_AND_CONT = False
     label_dict=None
-    if os.path.exists('../data_pytorch/label_dict.pkl') and LOAD_DICT_AND_CONT:
+    if os.path.exists('../../data_pytorch/label_dict.pkl') and LOAD_DICT_AND_CONT:
         print('loading label_dict from file and continuing from last file...')
-        with open('../data_pytorch/label_dict.pkl', 'rb') as f:
+        with open('../../data_pytorch/label_dict.pkl', 'rb') as f:
             label_dict = pickle.load(f)
 
-    order = pd.read_csv('../data2/aml_genes_to_use.csv')['x'].values.tolist() ## load gene order (genes_to_use)
+    order = pd.read_csv('../../data2/aml_genes_to_use.csv')['x'].values.tolist() ## load gene order (genes_to_use)
     ngenes = len(order)
     obs_size = (ngenes, 2)
 
-    toensembl = make_toensembl('../data2/gene_id_map.csv')
+    toensembl = make_toensembl('../../data2/gene_id_map.csv')
 
     expr = expr_data(depmap_path = '../data2/depmap_expr_amlgenes.csv', beataml_path = '../data2/beataml_expr_amlgenes.csv', gene_order = order)
-    drug = drug_data('../data2/drug_data_aml_genes.csv', toensembl)
+    drug = drug_data('../../data2/drug_data_aml_genes.csv', toensembl)
     namer = file_name_tracker(label_dict=label_dict)
 
     try:
@@ -209,17 +209,17 @@ if __name__ == '__main__':
             if np.sum(obs[:,0]) > 0 and np.sum(obs[:,1]) > 0:
                 obs_name = namer.get_name(id, id_type, response_type, response)
                 pyt = torch.Tensor(obs)
-                torch.save(pyt, f'../data_pytorch/tensors/{obs_name}.pt')
+                torch.save(pyt, f'../../data_pytorch/tensors/{obs_name}.pt')
                 ii += 1
             #if ii == 5: break
 
         label_dict = namer.get_label_dict()
-        f = open("../data_pytorch/label_dict.pkl","wb")
+        f = open("../../data_pytorch/label_dict.pkl","wb")
         pickle.dump(label_dict,f)
         f.close()
     except:
         label_dict = namer.get_label_dict()
-        f = open("../data_pytorch/label_dict.pkl","wb")
+        f = open("../../data_pytorch/label_dict.pkl","wb")
         pickle.dump(label_dict,f)
         f.close()
         raise
