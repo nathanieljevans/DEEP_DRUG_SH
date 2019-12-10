@@ -153,7 +153,7 @@ class file_name_tracker:
         '''
         return self.label_dict
 
-def unpack_data2(p='../data2.zip', o='./../'):
+def unpack_data2(p='../../data2.zip', o='./../../'):
     '''
     '''
     if not os.path.exists(p[:-4]):
@@ -184,6 +184,12 @@ if __name__ == '__main__':
     # check for label_dict and load in
     LOAD_DICT_AND_CONT = False
     label_dict=None
+    if not os.path.exists('../../data_pytorch/'):
+        os.mkdir('../../data_pytorch')
+
+    if not os.path.exists('../../data_pytorch/tensors/'):
+        os.mkdir('../../data_pytorch/tensors')
+
     if os.path.exists('../../data_pytorch/label_dict.pkl') and LOAD_DICT_AND_CONT:
         print('loading label_dict from file and continuing from last file...')
         with open('../../data_pytorch/label_dict.pkl', 'rb') as f:
@@ -195,7 +201,7 @@ if __name__ == '__main__':
 
     toensembl = make_toensembl('../../data2/gene_id_map.csv')
 
-    expr = expr_data(depmap_path = '../data2/depmap_expr_amlgenes.csv', beataml_path = '../data2/beataml_expr_amlgenes.csv', gene_order = order)
+    expr = expr_data(depmap_path = '../../data2/depmap_expr_amlgenes.csv', beataml_path = '../../data2/beataml_expr_amlgenes.csv', gene_order = order)
     drug = drug_data('../../data2/drug_data_aml_genes.csv', toensembl)
     namer = file_name_tracker(label_dict=label_dict)
 
