@@ -9,7 +9,7 @@ THIS IS THE BEATAML ONLY CONFIG FILE
 ###############################################################################
 
 params = {
-'NAME' : 'BEATAML-DATA-001',
+'NAME' : 'BEATAML-DATA-002',
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -33,9 +33,9 @@ params = {
     ## `i` indicates the order of classification layers
 'RESP_TYPES' : {x:i for i,x in enumerate(['beatAML_AUC'])},
 
-'H1' : 3000,
-'H2' : 3000,
-'H3' : 500,                # Layer 3 - Dataset Shared
+'H1' : 1000,
+'H2' : 1000,
+'H3' : 750,                # Layer 3 - Dataset Shared
 'DH' : 500,                # Dataset Specific Layer
 
 'DO' : 0.5,                # Dropout
@@ -44,26 +44,26 @@ params = {
 'NGENES' : 523, #/ 523
 'EPOCHS' : 100,
 'LEARNING_WEIGHT' : 1e-1,
-'WEIGHT_DECAY' : 0.001,
+'WEIGHT_DECAY' : 0.01,
 
-'LR_DECAY_PATIENCE' : 50,       # batches (not epochs)
-'PRETRAIN_EPOCHS' : 20,
+'LR_DECAY_PATIENCE' : 5,       # batches (not epochs)
+'PRETRAIN_EPOCHS' : 10,
 'PRETRAIN_LR' : 1e-1,
 'PRETRAIN_WD' : 0.2,
 'PRETRAIN_DO' : 0.9,
 'PRETRAIN_MSE_WEIGHT' : 50,     # Weight applied to target MSE
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-'REPRODUCIBLE' : True,
+'REPRODUCIBLE' : False,
 'SEED' : 1000,
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 'train_params' : {'batch_size': 512,
           'shuffle': True,
-          'num_workers': 4},
+          'num_workers': 12},
 
 'test_params' : {'batch_size': 512,
           'shuffle': False,
-          'num_workers': 4}
+          'num_workers': 12}
 }

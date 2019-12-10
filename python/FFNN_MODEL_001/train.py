@@ -94,6 +94,9 @@ if __name__ == '__main__':
     print('saving model...')
     net.save_model()
 
+    print('saving config params...')
+    net.save_params()
+
 
 
 

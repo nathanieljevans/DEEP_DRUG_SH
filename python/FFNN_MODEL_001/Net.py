@@ -114,7 +114,7 @@ class Net(torch.nn.Module):
                 loss.backward()
                 optim.step()
                 total_loss += loss.detach().numpy()
-                print(f'EPOCH: {epoch} [training set] \t mse: [{(total_loss/ii):.4f}]  \t |  Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\r')
+                print(f'EPOCH: {epoch} [training set] \t mse: [{(total_loss/ii):.4f}]  \t |  Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\n')
                 scheduler.step(total_loss)
                 mse.append((total_loss/ii))
                 self.plot_mse(mse, 'pretraining_mse')
@@ -168,7 +168,7 @@ class Net(torch.nn.Module):
                 self.recorder['train']['batch-mse'].append(loss.detach().numpy()/X.size(0))
                 tr_mse.append(total_loss/ii)
                 self.plot_mse(tr_mse, 'training_sse')
-                print(f'Train set... mse: [{loss.detach().numpy()/(X.size(0)):.4f}] | Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\r')
+                print(f'Train set... mse: [{loss.detach().numpy()/(X.size(0)):.4f}] | Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\n')
 
 
             self.recorder['train']['total_loss'].append(total_loss)
@@ -190,7 +190,7 @@ class Net(torch.nn.Module):
                 test_yhats += yhat.data.numpy()[resp_selector==1].ravel().tolist()
                 test_ys += y.data.numpy().ravel().tolist()
                 self.recorder['test']['batch-mse'].append(loss/X.size(0))
-                print(f'Test set... mse: [{loss/(X.size(0)):.4f}] | Epoch progress: [{jj}/{len(self.test_gen.dataset)}] {"."*int(jj/(len(self.test_gen.dataset)/10))}', end = '\t\t\t\r')
+                print(f'Test set... mse: [{loss/(X.size(0)):.4f}] | Epoch progress: [{jj}/{len(self.test_gen.dataset)}] {"."*int(jj/(len(self.test_gen.dataset)/10))}', end = '\t\t\t\n')
 
             self.recorder['test']['mse'].append(test_total_loss/len(self.test_gen.dataset))
 
@@ -255,6 +255,13 @@ class Net(torch.nn.Module):
         '''
         with open(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/model.pkl", 'wb') as f:
             pickle.dump(self, f)
+
+    def save_params(self):
+        '''
+        '''
+        with open(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/config_params.txt", 'w') as f:
+            for param in self.params:
+                f.write(f'{param}:  {self.params[param]}\n')
 
 
 

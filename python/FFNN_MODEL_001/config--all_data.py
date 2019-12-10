@@ -2,7 +2,7 @@
 
 '''
 params = {
-'NAME' : 'ALL-DATA-3FC_shared-1dataset_outputlayer',
+'NAME' : 'ALL-DATA-3FC_002',
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -32,27 +32,27 @@ params = {
                                         'beatAML_AUC'])},
 
 
-'H1' : 3000,
-'H2' : 3000,
-'H3' : 500,                # Layer 3 - Dataset Shared
+'H1' : 1000,
+'H2' : 1000,
+'H3' : 750,                # Layer 3 - Dataset Shared
 'DH' : 500,                # Dataset Specific Layer
 
 'DO' : 0.5,                # Dropout
 'NCONVS' : 10,
 'PRINT_EVERY' : 1,
 'NGENES' : 523, #/ 523
-'EPOCHS' : 100,
+'EPOCHS' : 50,
 'LEARNING_WEIGHT' : 1e-1,
-'WEIGHT_DECAY' : 0.001,
+'WEIGHT_DECAY' : 0.01,
 'LR_DECAY_PATIENCE' : 50,       # batches (not epochs)
-'PRETRAIN_EPOCHS' : 20,
+'PRETRAIN_EPOCHS' : 5,
 'PRETRAIN_LR' : 1e-1,
 'PRETRAIN_WD' : 0.1,
 'PRETRAIN_DO' : 0.9,
 'PRETRAIN_MSE_WEIGHT' : 50,     # Weight applied to target MSE
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-'REPRODUCIBLE' : True,
+'REPRODUCIBLE' : False,
 'SEED' : 1000,
 
 # -----------------------------------------------------------------------------
