@@ -274,9 +274,11 @@ def aggregate_labels(label_dict, keep):
                     test_labels = {**test_labels, **label_dict[dataset][split]}
                 if split == 'val':
                     val_labels = {**val_labels, **label_dict[dataset][split]}
-
-    aml_holdout = label_dict['beatAML_AUC']['PAT_HOLDOUT']
-
+    try: 
+        aml_holdout = label_dict['beatAML_AUC']['PAT_HOLDOUT']
+    except: 
+        print('NO `beatAML_AUC` key in label_dict: returning None aml_holdout -BUG')
+        aml_holdout=[]
     print()
     print(f'aggregated labels [kept: {list(keep)}]:')
     print(f'\ttrain set: \t\t {len(train_labels)}')

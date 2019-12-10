@@ -29,7 +29,7 @@ import argparse
 
 # ---
 import sys
-sys.path.append(r'C:\Users\natha\Documents\DEEP_DRUG_SH\python\UTILS')
+sys.path.append('../UTILS/')
 import utils
 #from config import *
 import Net

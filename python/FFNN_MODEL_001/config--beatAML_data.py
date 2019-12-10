@@ -33,21 +33,21 @@ params = {
     ## `i` indicates the order of classification layers
 'RESP_TYPES' : {x:i for i,x in enumerate(['beatAML_AUC'])},
 
-'H1' : 1000,
-'H2' : 1000,
-'H3' : 250,                # Layer 3 - Dataset Shared
-'DH' : 100,                # Dataset Specific Layer
+'H1' : 3000,
+'H2' : 3000,
+'H3' : 500,                # Layer 3 - Dataset Shared
+'DH' : 500,                # Dataset Specific Layer
 
-'DO' : 0.25,                # Dropout
+'DO' : 0.5,                # Dropout
 'NCONVS' : 10,
 'PRINT_EVERY' : 1,
 'NGENES' : 523, #/ 523
-'EPOCHS' : 25,
+'EPOCHS' : 100,
 'LEARNING_WEIGHT' : 1e-1,
 'WEIGHT_DECAY' : 0.001,
 
 'LR_DECAY_PATIENCE' : 50,       # batches (not epochs)
-'PRETRAIN_EPOCHS' : 10,
+'PRETRAIN_EPOCHS' : 20,
 'PRETRAIN_LR' : 1e-1,
 'PRETRAIN_WD' : 0.2,
 'PRETRAIN_DO' : 0.9,
