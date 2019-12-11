@@ -31,7 +31,6 @@ params = {
                                         'AUC_drug_CCLE',
                                         'beatAML_AUC'])},
 
-
 'H1' : 1000,
 'H2' : 1000,
 'H3' : 750,                # Layer 3 - Dataset Shared
