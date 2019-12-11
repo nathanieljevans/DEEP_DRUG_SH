@@ -2,7 +2,7 @@
 
 '''
 params = {
-'NAME' : 'ALL-DATA-3FC_002',
+'NAME' : 'ALL-DATA-3FC_006',
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -31,20 +31,20 @@ params = {
                                         'AUC_drug_CCLE',
                                         'beatAML_AUC'])},
 
-'H1' : 1000,
-'H2' : 1000,
-'H3' : 750,                # Layer 3 - Dataset Shared
-'DH' : 500,                # Dataset Specific Layer
+'H1' : 5000,
+'H2' : 5000,
+'H3' : 100,                # Layer 3 - Dataset Shared
+'DH' : 100,                # Dataset Specific Layer
 
 'DO' : 0.5,                # Dropout
 'NCONVS' : 10,
 'PRINT_EVERY' : 1,
 'NGENES' : 523, #/ 523
-'EPOCHS' : 50,
+'EPOCHS' : 25,
 'LEARNING_WEIGHT' : 1e-1,
 'WEIGHT_DECAY' : 0.01,
 'LR_DECAY_PATIENCE' : 50,       # batches (not epochs)
-'PRETRAIN_EPOCHS' : 5,
+'PRETRAIN_EPOCHS' : 2,
 'PRETRAIN_LR' : 1e-1,
 'PRETRAIN_WD' : 0.1,
 'PRETRAIN_DO' : 0.9,

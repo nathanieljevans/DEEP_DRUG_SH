@@ -9,7 +9,7 @@ THIS IS THE BEATAML ONLY CONFIG FILE
 ###############################################################################
 
 params = {
-'NAME' : 'BEATAML-DATA-003',
+'NAME' : 'BEATAML-DATA-005',
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -33,21 +33,21 @@ params = {
     ## `i` indicates the order of classification layers
 'RESP_TYPES' : {x:i for i,x in enumerate(['beatAML_AUC'])},
 
-'H1' : 3000,
-'H2' : 3000,
+'H1' : 4000,
+'H2' : 4000,
 'H3' : 1000,                # Layer 3 - Dataset Shared
-'DH' : 500,                # Dataset Specific Layer
+'DH' : 100,                # Dataset Specific Layer
 
-'DO' : 0.7,                # Dropout
+'DO' : 0.5,                # Dropout
 'NCONVS' : 10,
 'PRINT_EVERY' : 1,
 'NGENES' : 523, #/ 523
-'EPOCHS' : 100,
+'EPOCHS' : 200,
 'LEARNING_WEIGHT' : 1e-1,
 'WEIGHT_DECAY' : 0.1,
-'LR_DECAY_PATIENCE' : 15,       # batches (not epochs)
+'LR_DECAY_PATIENCE' : 75,       # batches (not epochs)
 
-'PRETRAIN_EPOCHS' : 10,
+'PRETRAIN_EPOCHS' : 5,
 'PRETRAIN_LR' : 1e-2,
 'PRETRAIN_WD' : 0.2,
 'PRETRAIN_DO' : 0.9,

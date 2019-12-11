@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=evans_cpu_alldata_train
-#SBATCH --time=10:00:00
-#SBATCH --mem=25G
+#SBATCH --job-name=all05
+#SBATCH --time=24:00:00
+#SBATCH --mem=16G
 #SBATCH -c 12
 #SBATCH --out=./../../data_pytorch/logfile/cpu_alldata_train_LOG.txt
 #SBATCH --error=./../../data_pytorch/logfile/cpu_alldata_train_ERROR.txt

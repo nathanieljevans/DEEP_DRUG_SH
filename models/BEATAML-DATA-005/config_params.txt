@@ -1,0 +1,32 @@
+NAME:  BEATAML-DATA-005
+DATA_DIR:  ../../data_pytorch/tensors/
+LABEL_PATH:  ../../data_pytorch/label_dict.pkl
+SPLIT_LABEL_PATH:  ../../data_pytorch/split_label_dict.pkl
+MODEL_OUT_DIR:  ../../models/
+RESPLIT_DATA:  False
+TRAIN_PROP:  0.7
+TEST_PROP:  0.15
+VAL_PROP:  0.15
+N_BEATAML_PATIENTS_EXCLUSIVE_TO_TEST:  30
+RESP_TYPES:  {'beatAML_AUC': 0}
+H1:  4000
+H2:  4000
+H3:  1000
+DH:  100
+DO:  0.5
+NCONVS:  10
+PRINT_EVERY:  1
+NGENES:  523
+EPOCHS:  200
+LEARNING_WEIGHT:  0.1
+WEIGHT_DECAY:  0.1
+LR_DECAY_PATIENCE:  75
+PRETRAIN_EPOCHS:  5
+PRETRAIN_LR:  0.01
+PRETRAIN_WD:  0.2
+PRETRAIN_DO:  0.9
+PRETRAIN_MSE_WEIGHT:  50
+REPRODUCIBLE:  False
+SEED:  1000
+train_params:  {'batch_size': 1024, 'shuffle': True, 'num_workers': 12}
+test_params:  {'batch_size': 512, 'shuffle': False, 'num_workers': 12}
