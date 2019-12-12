@@ -2,7 +2,7 @@
 
 '''
 params = {
-'NAME' : 'ALL-DATA-3FC_006',
+'NAME' : 'ALL-DATA-3FC_007',
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -40,11 +40,11 @@ params = {
 'NCONVS' : 10,
 'PRINT_EVERY' : 1,
 'NGENES' : 523, #/ 523
-'EPOCHS' : 25,
-'LEARNING_WEIGHT' : 1e-1,
+'EPOCHS' : 100,
+'LEARNING_WEIGHT' : 1e-2,
 'WEIGHT_DECAY' : 0.01,
-'LR_DECAY_PATIENCE' : 50,       # batches (not epochs)
-'PRETRAIN_EPOCHS' : 2,
+'LR_DECAY_PATIENCE' : 100,       # batches (not epochs)
+'PRETRAIN_EPOCHS' : 1,
 'PRETRAIN_LR' : 1e-1,
 'PRETRAIN_WD' : 0.1,
 'PRETRAIN_DO' : 0.9,
