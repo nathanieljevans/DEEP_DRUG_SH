@@ -48,7 +48,7 @@ class Training_Progress_Plotter:
         self.axes[0].cla()
 
         ######### TRAIN #########
-        alpha_ = 284./len(tst_ys)
+        alpha_ = 0.5 #284./len(tst_ys)
 
         tr_df = pd.DataFrame({'y':tr_ys, 'yhat':tr_yhats})
         tr_df.sort_values(by='y', inplace=True)
@@ -274,9 +274,9 @@ def aggregate_labels(label_dict, keep):
                     test_labels = {**test_labels, **label_dict[dataset][split]}
                 if split == 'val':
                     val_labels = {**val_labels, **label_dict[dataset][split]}
-    try: 
+    try:
         aml_holdout = label_dict['beatAML_AUC']['PAT_HOLDOUT']
-    except: 
+    except:
         print('NO `beatAML_AUC` key in label_dict: returning None aml_holdout -BUG')
         aml_holdout=[]
     print()

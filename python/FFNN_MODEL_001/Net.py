@@ -2,7 +2,7 @@
 ###############################################################################
 ###############################################################################
 '''
-THIS IS THE BEATAML ONLY NET FILE
+THIS IS THE SHARED NET FILE
 '''
 ###############################################################################
 ###############################################################################
@@ -18,6 +18,7 @@ import utils
 from matplotlib import pyplot as plt
 import os
 import pickle
+import copy
 
 class Net(torch.nn.Module):
 
@@ -66,7 +67,7 @@ class Net(torch.nn.Module):
 
         a3 = self.do(self.bn3(F.relu(self.fc3(a2))))                     # FC layer 3
 
-        aDS = [F.relu(FC(a3)) for FC in self.DSP]
+        aDS = [F.leaky_relu(FC(a3)) for FC in self.DSP]
         o = [out(a4) for a4, out in zip(aDS, self.out)]
         endout = torch.zeros(x.size(0), len(self.params['RESP_TYPES'].keys()),dtype=torch.float)
         for i,oo in enumerate(o): endout[:,i] = oo.squeeze()
@@ -114,7 +115,7 @@ class Net(torch.nn.Module):
                 loss.backward()
                 optim.step()
                 total_loss += loss.detach().numpy()
-                print(f'EPOCH: {epoch} [training set] \t mse: [{(total_loss/ii):.4f}]  \t |  Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\n')
+                if self.params['PRINT_MID_EPOCH_INFO']: print(f'EPOCH: {epoch} [training set] \t mse: [{(total_loss/ii):.4f}]  \t |  Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\n')
                 scheduler.step(total_loss)
                 mse.append((total_loss/ii))
                 self.plot_mse(mse, 'pretraining_mse')
@@ -145,6 +146,7 @@ class Net(torch.nn.Module):
         MAX_EPOCH = self.params['EPOCHS']
         tr_mse = []
         for epoch in range(MAX_EPOCH):
+
             total_loss = 0
             yhats=[]
             ys=[]
@@ -168,8 +170,7 @@ class Net(torch.nn.Module):
                 self.recorder['train']['batch-mse'].append(loss.detach().numpy()/X.size(0))
                 tr_mse.append(total_loss/ii)
                 self.plot_mse(tr_mse, 'training_sse')
-                print(f'Train set... mse: [{loss.detach().numpy()/(X.size(0)):.4f}] | Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\n')
-
+                if self.params['PRINT_MID_EPOCH_INFO']: print(f'Train set... mse: [{loss.detach().numpy()/(X.size(0)):.4f}] | Epoch progress: [{ii}/{len(self.train_gen.dataset)}] {"."*int(ii/(len(self.train_gen.dataset)/10))}', end = '\t\t\t\n')
 
             self.recorder['train']['total_loss'].append(total_loss)
             self.recorder['train']['mse'].append(total_loss/len(self.train_gen.dataset))
@@ -190,7 +191,7 @@ class Net(torch.nn.Module):
                 test_yhats += yhat.data.numpy()[resp_selector==1].ravel().tolist()
                 test_ys += y.data.numpy().ravel().tolist()
                 self.recorder['test']['batch-mse'].append(loss/X.size(0))
-                print(f'Test set... mse: [{loss/(X.size(0)):.4f}] | Epoch progress: [{jj}/{len(self.test_gen.dataset)}] {"."*int(jj/(len(self.test_gen.dataset)/10))}', end = '\t\t\t\n')
+                if self.params['PRINT_MID_EPOCH_INFO']: print(f'Test set... mse: [{loss/(X.size(0)):.4f}] | Epoch progress: [{jj}/{len(self.test_gen.dataset)}] {"."*int(jj/(len(self.test_gen.dataset)/10))}', end = '\t\t\t\n')
 
             self.recorder['test']['mse'].append(test_total_loss/len(self.test_gen.dataset))
 
@@ -199,9 +200,14 @@ class Net(torch.nn.Module):
                                 epoch=epoch, tr_loss=self.recorder['train']['mse'][-1],
                                 tst_loss=self.recorder['test']['mse'][-1])
 
-            if (epoch % self.params['PRINT_EVERY']) == 0:
+            if ((epoch + 1) % self.params['PRINT_EVERY']) == 0:
                 print()
                 print(f'>>> END EPOCH {epoch+1}/{MAX_EPOCH} || train total loss: {total_loss:.2f} | train mse: {total_loss/len(self.train_gen.dataset):.6f} || test total_loss: {test_total_loss:.4g} | test mse: {test_total_loss / len(self.test_gen.dataset):.4g} \t\t\t')
+
+            if (self.params['SAVE_MODEL_EVERY'] != -1) and ((epoch + 1) % self.params['SAVE_MODEL_EVERY'] == 0):
+                print('saving model.')
+                self.save_model()
+                self.plotter.save_gif(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/training_fit.gif")
         print()
         print('training complete...')
         self.plotter.save_gif(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/training_fit.gif")
@@ -254,7 +260,7 @@ class Net(torch.nn.Module):
 
         '''
         with open(f"{self.params['MODEL_OUT_DIR']}/{self.params['NAME']}/model.pkl", 'wb') as f:
-            pickle.dump(self, f)
+            pickle.dump(copy.copy(self), f)
 
     def save_params(self):
         '''

@@ -19,8 +19,8 @@ params = {
 'N_BEATAML_PATIENTS_EXCLUSIVE_TO_TEST' : 30  ,          # remove patients for test
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-
-
+'SAVE_MODEL_EVERY' : 5, # epochs
+'PRINT_MID_EPOCH_INFO' : False,
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
     ## `i` indicates the order of classification layers
@@ -41,9 +41,10 @@ params = {
 'PRINT_EVERY' : 1,
 'NGENES' : 523, #/ 523
 'EPOCHS' : 100,
-'LEARNING_WEIGHT' : 1e-2,
+'LEARNING_WEIGHT' : 1e-1,
 'WEIGHT_DECAY' : 0.01,
-'LR_DECAY_PATIENCE' : 100,       # batches (not epochs)
+'LR_DECAY_PATIENCE' : 20,       # batches (not epochs)
+
 'PRETRAIN_EPOCHS' : 1,
 'PRETRAIN_LR' : 1e-1,
 'PRETRAIN_WD' : 0.1,
@@ -56,11 +57,11 @@ params = {
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-'train_params' : {'batch_size': 4*2048,
+'train_params' : {'batch_size': 2**14, #  16384
           'shuffle': True,
           'num_workers': 12},
 
-'test_params' : {'batch_size': 2048,
+'test_params' : {'batch_size': 2**14,
           'shuffle': False,
           'num_workers': 12}
 }

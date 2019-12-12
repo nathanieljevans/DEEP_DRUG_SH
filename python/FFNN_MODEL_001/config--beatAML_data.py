@@ -26,15 +26,15 @@ params = {
 'N_BEATAML_PATIENTS_EXCLUSIVE_TO_TEST' : 30  ,          # remove patients for test
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-
-
+'SAVE_MODEL_EVERY' : 2, # epochs
+'PRINT_MID_EPOCH_INFO' : True,
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
     ## `i` indicates the order of classification layers
 'RESP_TYPES' : {x:i for i,x in enumerate(['beatAML_AUC'])},
 
-'H1' : 4000,
-'H2' : 4000,
+'H1' : 1000,
+'H2' : 1000,
 'H3' : 1000,                # Layer 3 - Dataset Shared
 'DH' : 100,                # Dataset Specific Layer
 
@@ -42,12 +42,12 @@ params = {
 'NCONVS' : 10,
 'PRINT_EVERY' : 1,
 'NGENES' : 523, #/ 523
-'EPOCHS' : 200,
+'EPOCHS' : 5,
 'LEARNING_WEIGHT' : 1e-1,
 'WEIGHT_DECAY' : 0.1,
 'LR_DECAY_PATIENCE' : 75,       # batches (not epochs)
 
-'PRETRAIN_EPOCHS' : 5,
+'PRETRAIN_EPOCHS' : 1,
 'PRETRAIN_LR' : 1e-2,
 'PRETRAIN_WD' : 0.2,
 'PRETRAIN_DO' : 0.9,
