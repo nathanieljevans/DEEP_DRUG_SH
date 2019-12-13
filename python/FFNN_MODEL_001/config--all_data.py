@@ -2,7 +2,7 @@
 
 '''
 params = {
-'NAME' : 'ALL-DATA-3FC_008',
+'NAME' : 'ALL-DATA-3FC_010',
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -33,8 +33,8 @@ params = {
 
 'H1' : 5000,
 'H2' : 5000,
-'H3' : 25,                # Layer 3 - Dataset Shared
-'DH' : 100,                # Dataset Specific Layer
+'H3' : 50,                # Layer 3 - Dataset Shared
+'DH' : 200,                # Dataset Specific Layer
 
 'DO' : 0.5,                # Dropout
 'NCONVS' : 10,
