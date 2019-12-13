@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=all07
+#SBATCH --job-name=all09
 #SBATCH --time=36:00:00
 #SBATCH --mem=64G
 #SBATCH -c 20
